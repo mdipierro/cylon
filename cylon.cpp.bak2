@@ -1,0 +1,257 @@
+
+#include "math.h"
+#include "vector"
+#include "list"
+using namespace std;
+
+
+#define forXYZ(i) for(int i=0; i<3; i++)
+const int X=0;
+const int Y=1;
+const int Z=2;
+const int W=3; // for quaternions only
+
+
+  class Vector3 {
+    public:
+    float v[3];
+    Vector3(float x=0, float y=0, float z=0) {
+      v[X]=x; v[Y]=y; v[Z]=z;
+    }
+    float operator()(int i) const { return v[i]; }
+    float &operator()(int i) { return v[i]; }
+  };
+
+
+  Vector3 operator*(float c, const Vector3 &v) {
+    return Vector3(c*v(X),c*v(Y),c*v(Z));
+  }
+  Vector3 operator*(const Vector3 &v, float c) {
+    return c*v;
+  }
+  Vector3 operator/(const Vector3 &v, float c) {
+    return (1.0/c)*v;
+  }
+  Vector3 operator+(const Vector3 &v, const Vector3 &w) {
+    return Vector3(v(X)+w(X),v(Y)+w(Y),v(Z)+w(Z));
+  }
+  Vector3 operator-(const Vector3 &v, const Vector3 &w) {
+    return Vector3(v(X)+w(X),v(Y)+w(Y),v(Z)+w(Z));
+  }
+  float operator*(const Vector3 &v, const Vector3 &w) {
+    return v(X)*w(X) + v(Y)*w(Y) + v(Z)*w(Z);
+  }
+  Vector3 cross(const Vector3 &v, const Vector3 &w) {
+    return Vector3(v(Y)*w(Z)-v(Z)*w(Y),
+                   v(Z)*w(X)-v(X)*w(Z),
+                   v(X)*w(Y)-v(Y)*w(Z));
+  }
+
+
+  class Quaternion {
+    public:
+    float q[4];
+    Quaternion(float x, float y, float z, float w) {
+      q[X]=x; q[Y]=y; q[Z]=z; q[W]=w;
+    }
+    Quaternion(float theta, const Vector3 &v) {
+      float n = sqrt(v(X)*v(X)+v(Y)*v(Y)+v(Z)*v(Z));
+      float s = sin(theta/2);
+      q[X]=v(X)/n*s; q[Y]=v(Y)/n*s; q[Z]=v(Z)/n; 
+      q[W]=cos(theta/2); 
+    }
+    float operator()(int i) const { return q[i]; }
+    float &operator()(int i) { return q[i]; }
+  };
+
+
+  Quaternion operator*(float c, const Quaternion &v) {
+    return Quaternion(c*v(X),c*v(Y),c*v(Z),c*v(W));
+  }
+  Quaternion operator*(const Quaternion &v, float c) {
+    return c*v;
+  }
+  Quaternion operator+(const Quaternion &v,const Quaternion &w) {
+    return Quaternion(v(X)+w(X),v(Y)+w(Y),v(Z)+w(Z),v(W)+w(W));
+  }
+  Quaternion operator-(const Quaternion &v,const Quaternion &w) {
+    return Quaternion(v(X)+w(X),v(Y)+w(Y),v(Z)+w(Z),v(W)-w(W));
+  }
+  Quaternion operator*(const Vector3 &v, const Quaternion &w) {
+    return Quaternion(-v(X)*w(X) - v(Y)*w(Y) - v(Z)*w(Z),    
+                      v(X)*w(W) + v(Y)*w(Z) - v(Z)*w(Y),
+                      v(Y)*w(W) + v(Z)*w(X) - v(X)*w(Z), 
+                      v(Z)*w(W) + v(X)*w(Y) - v(Y)*w(X));
+  }  
+
+
+class Matrix33 {
+  public:
+  float c[3][3];
+  void setQuaternion(const Quaternion &theta) {
+    c[X][X]=2.0*(theta(X)*theta(X)+theta(W)*theta(W))-1;
+    c[X][Y]=2.0*(theta(X)*theta(X)-theta(Z)*theta(W));
+    c[X][Z]=2.0*(theta(X)*theta(Z)+theta(Y)*theta(W));
+    c[Y][X]=2.0*(theta(X)*theta(Y)+theta(Z)*theta(W));
+    c[Y][Y]=2.0*(theta(Y)*theta(Y)-theta(W)*theta(W))-1;
+    c[Y][Z]=2.0*(theta(Y)*theta(Z)-theta(X)*theta(W));
+    c[Z][X]=2.0*(theta(X)*theta(Z)-theta(Y)*theta(W));
+    c[Z][Y]=2.0*(theta(Y)*theta(Z)+theta(X)*theta(W));
+    c[Z][Z]=2.0*(theta(Z)*theta(Z)-theta(W)*theta(W))-1;
+  }
+  const float operator()(int i, int j) const { return c[i][j]; }
+  float &operator()(int i, int j) { return c[i][j]; }
+};
+class Rotation : public Matrix33 {
+  void setDirection(float theta, const Vector3& v) {
+    return setQuaternion(Quaternion(theta,v));
+  }
+};
+class InertiaTensor : public Matrix33 {};
+InertiaTensor operator+(const InertiaTensor &a, const InertiaTensor &b) {
+  InertiaTensor c=a;
+  forXYZ(i) forXYZ(j) c(i,j)+=b(i,j);
+  return c;
+}
+
+
+  Vector3 operator*(const Matrix33 &R, const Vector3 &v) {
+    return Vector3(R(X,X)*v(X)+R(X,Y)*v(Y)+R(X,Z)*v(Z),
+                   R(Y,X)*v(X)+R(Y,Y)*v(Y)+R(Y,Z)*v(Z),
+                   R(Z,X)*v(X)+R(Z,Y)*v(Y)+R(Z,Z)*v(Z));
+  }
+
+
+  Matrix33 operator*(const Matrix33 &R, const Matrix33 &S) {
+    Matrix33 T;
+    forXYZ(i) forXYZ(j) forXYZ(k) T(i,j)=R(i,k)*S(k,j);
+    return T;
+  }
+
+
+  Matrix33 inverse(const Matrix33 &R) {
+    Matrix33 T;
+    float d=R(X,X)*(R(Z,Z)*R(Y,Y)-R(Z,Y)*R(Y,Z))
+           -R(Y,X)*(R(Z,Z)*R(X,Y)-R(Z,Y)*R(X,Z))
+           +R(Z,X)*(R(Y,Z)*R(X,Y)-R(Y,Y)*R(X,Z));
+    T(X,X)=(R(Z,Z)*R(Y,Y)-R(Z,Y)*R(Y,Z))/d;
+    T(X,Y)=(R(Z,Y)*R(X,Z)-R(Z,Z)*R(X,Y))/d;
+    T(X,Z)=(R(Y,Z)*R(X,Y)-R(Y,Y)*R(X,Z))/d;
+    T(Y,X)=(R(Z,X)*R(Y,Z)-R(Z,Z)*R(Y,X))/d;
+    T(Y,Y)=(R(Z,Z)*R(X,X)-R(Z,X)*R(X,Z))/d;
+    T(Y,Z)=(R(Y,X)*R(X,Z)-R(Y,Z)*R(X,X))/d;
+    T(Z,X)=(R(Z,Y)*R(Y,X)-R(Z,X)*R(Y,Y))/d;
+    T(Z,Y)=(R(Z,Y)*R(X,Y)-R(Z,Y)*R(X,X))/d;
+    T(Z,Z)=(R(Y,Y)*R(X,X)-R(Y,X)*R(X,Y))/d;
+    return T;
+  }
+
+
+  class Body {
+    public:
+    // object shape
+    vector<Vector3> vertices;
+    vector<vector<int> > faces;
+    // properties of the body /////////////////////////
+    float m;           // mass
+    InertiaTensor I;   // moments of inertia (3x3 matrix)
+    // state of the body //////////////////////////////
+    Vector3 p;         // position of the center of mass
+    Vector3 K;         // momentum
+    Quaternion theta;  // orientation
+    Vector3 L;         // angular momentum
+    // auxiliary variables ///////////////////////////    
+    Vector3 F;
+    Vector3 tau;
+    Vector3 v;         // velocity
+    Vector3 omega;     // angular velocity
+    Rotation  R;       // rotation equivalent theta (3x3 matrix)
+    // forces and constraints
+    // ...
+    void integrator(float dt);
+    void absorb(const Body &b);
+  };
+
+
+  void Body::integrator(float dt) {
+    v     = (1/m)*K;
+    omega = inverse(I)*L;
+    p     = p + v*dt;                   // shift
+    K     = K + F*dt;                   // push
+    theta = theta+(dt/2)*(omega*theta); // rotate
+    L     = L + tau*dt;                 // spin
+    R.setQuaternion(theta);
+  }
+
+
+  class Universe {
+    public:
+    list<Body*> bodies;
+    // create universe by popultaing bodies
+    Universe() {
+      // ...
+    }
+    // evolve universe
+    void evolve(float dt) {
+      // integrate them all
+      for(int frame=0;;frame++) {
+        // compute force F and torque tau for each object
+        for(list<Body*>::iterator body=bodies.begin();
+                                  body!=bodies.end(); body++) {
+          // ..
+        }
+        // integrate
+        for(list<Body*>::iterator body=bodies.begin();
+                                  body!=bodies.end(); body++) {        
+          (*body)->integrator(dt);
+        }
+        // draw all objects
+        for(list<Body*>::iterator body=bodies.begin();
+        body!=bodies.end(); body++) {
+          // rotate and translated vertices
+          // draw lines for every face
+        }
+        // capture events (keyboard and mouse) and act accordingly
+      }    
+    }
+  };
+
+
+  InertiaTensor dI(float m, const Vector3 &r) {
+    InertiaTensor I;
+    float r2 = r*r;
+    forXYZ(j) forXYZ(k) I(j,k) = m*((j==k)?r2:0-r(j)*r(k));
+  }
+
+  void Body::absorb(const Body &b) { // b is nother body!
+    Vector3 p_cm = (m*p + b.m)/(m+b.m);
+    Vector3 shift = p-p_cm;
+    p = p_cm;
+    K = K+b.K;
+    L = L+b.L;
+    I = I + dI(m,shift)+b.I+dI(b.m,b.p-p_cm);
+    m = (m+b.m);
+    int n = vertices.size(); 
+    // update all existing vertices
+    for(int i=0; i<n; i++)
+      vertices[i]=vertices[i]+shift;
+    // copy all vertices
+    for(int i=0; i<b.vertices.size(); i++)
+      vertices.push_back(b.vertices[i]);
+    // copy all faces and re-label vertices
+    for(int j=0; j<b.faces.size(); j++) {
+      int m = faces.size();
+      faces.resize(m+1);
+      for(int i=0; i<b.faces[j].size(); i++)
+        faces[m].push_back(b.faces[j][i]+n);
+    }
+  }
+
+
+int main() {
+  float dt=0.001;
+  Universe myuniverse;
+  myuniverse.evolve(dt);
+  return 0;
+}
+

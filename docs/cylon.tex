@@ -1,0 +1,475 @@
+\documentclass[12pt]{article}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{makeidx}
+\makeindex
+\usepackage{upquote}
+\usepackage{listings}
+\usepackage{url}
+\usepackage[utf8x]{inputenc}
+
+\definecolor{lg}{rgb}{0.9,0.9,0.9}
+\definecolor{dg}{rgb}{0.3,0.3,0.3}
+
+\lstset{ %
+language=C++,                   % the language of the code
+breaklines=true,
+basicstyle=\ttfamily\color{dg}\scriptsize,
+keywordstyle=\bf\ttfamily\color{black},
+commentstyle=\it,
+stringstyle=\color{dg}\it,
+numbers=left, numberstyle=\color{dg}\scriptsize, stepnumber=1, numbersep=5pt,
+backgroundcolor=\color{lg}, tabsize=4, showspaces=false,
+showstringspaces=false
+}
+
+\title{Game Physics in a Nutshell}
+\author{Massimo Di Pierro}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Newton}
+
+Everything starts with Newton's Laws which we will phrase as follows:
+
+\begin{quote}
+Objects like to move at constant velocity. If an object changes its velocity we say it is subject to a force. A force is something external that acts on the object and is proportional to its acceleration. The proportionality factor is a property of the object which we call mass.
+\end{quote}
+
+Let's measure the position of an object at different times...
+
+\begin{center}
+\begin{tabular}{lccccccc} \hline
+time & $t$ & $t+dt$ & $t+2dt$ & $t+3dt$ & $t+4dt$ & $t+5dt$ & ... \\
+position & $\vec p_t$ & $\vec p_{t+dt}$ & $\vec p_{t+2dt}$ & $\vec p_{t+3dt}$ & $\vec p_{t+4dt}$ & $\vec p_{t+5dt}$ & ... \\ \hline
+\end{tabular}
+\end{center}
+
+We define the velocity as the change in position per unit of time:
+\begin{equation}
+\vec v_t \equiv \frac{\vec p_{t+dt}-\vec p_t}{dt}
+\label{one}
+\end{equation}
+and we define the acceleration as the change in velocity per unit of time
+\begin{equation}
+\vec a_t \equiv \frac{\vec v_{t+dt}-\vec v_t}{dt}
+\label{two}
+\end{equation}
+
+\begin{center}
+\begin{tabular}{lcccc} \hline
+time & $t$ & $t+dt$ & $t+2dt$ & ... \\
+position & $\vec p_t$ & $\vec p_{t+dt}$ & $\vec p_{t+2dt}$ & ... \\
+velocity & $\vec v_t = \frac{\vec p_{t+dt}-\vec p_t}{dt}$ & $\vec v_{t+dt} = \frac{\vec p_{t+2dt}-\vec p_{t+dt}}{dt}$ & ... & ... \\
+acceleration & $\vec a_t = \frac{\vec v_{t+dt}-\vec v_t}{dt}$ & ... & ... & ... \\ \hline
+\end{tabular}
+\end{center}
+
+If we can determine $\vec p$ at different times, we can compute $v$ and $a$ at different times. Notice that if the velocity is constant the acceleration is zero:
+\begin{equation}
+\vec a_t \equiv (\vec v_{t+dt}-\vec v_t)/dt = 0
+\end{equation}
+We now solve eq.~\ref{one} and eq.~\ref{two} in $\vec p_{t+dt}$ and $\vec v_{t+dt}$ respectively. We find:
+\begin{eqnarray}
+\vec p_{t+dt} &=& \vec p_t + \vec v_t dt \\ 
+\vec v_{t+dt} &=& \vec v_t + \vec a_t dt 
+\label{changes}
+\end{eqnarray}
+
+The Newton's laws (as stated above) say that if the velocity changes. I.e. there is an acceleration, then the object is subject to a force. The law does not say that if two objects are subject to the same force, they will have the same acceleration. Therefore, it is reasonable to assume that
+\begin{equation}
+\vec F_t \propto \vec a_t
+\end{equation}
+and the proportionality factor is different for different objects. We call this proportionality factor $m$:
+\begin{equation}
+\vec F_t = m \vec a_t
+\label{newton2}
+\end{equation}
+We replace the solution of eq.~\ref{newton2} for $a_t$ in eq.~\ref{changes} and we obtain:
+\begin{eqnarray}
+\vec p_{t+dt} &=& \vec p_t + \vec v_t dt \label{p_update} \\
+\vec v_{t+dt} &=& \vec v_t + (1/m) \vec F_t dt \label{v_update}
+\end{eqnarray}
+
+In other words: {\it if we know the position and the velocity of the object, and the force acting on the object at time $t$ we can compute the position and the velocity at time $t+dt$.}
+
+The set of eqs.~\ref{p_update} and \ref{v_update} are called an {\it Euler integrator}. Technically they are only correct in the limit $dt\rightarrow 0$ but they provide a decent approximation for small $dt$ if the force does not change significnaly over the time interval $dt$.
+
+\section{Revised Newton}
+
+Is $m$ constant? What if $m$ changes with time? A more accurate way to write the Newton equation is in terms of a quantity we call {\it momentum}, defined as:
+\begin{equation}
+\vec K_t \equiv m_t \vec v_t 
+\end{equation}
+In terms of $\vec K_t$, eq.~\ref{newton2} can be written as
+\begin{equation}
+\vec F_t = \frac{\vec K_{t+dt}-\vec K_t}{dt} 
+\label{newton21}
+\end{equation}
+
+Now we can perform a change of variables from $v$ to $K$ and rewrite the Euler integrator as follows:
+\begin{eqnarray}
+\vec F_t =& \sum_i \vec F_i &\qquad \textrm{(compute force)}\\
+\vec v_{t} =& m_t^{-1}\vec K_{t} &\qquad \textrm{(compute velocity)}\\
+\vec p_{t+dt} =& \vec p_t + \vec v_t dt &\qquad \textrm{(update position)}\\
+\vec K_{t+dt} =& \vec K_t + \vec F_t dt &\qquad \textrm{(update momentum)}\label{euler21}
+\end{eqnarray}
+
+In other words: {\it if we know the position and the momentum of the object, and the force acting on the object at time $t$, we can compute the position and the momentum at time $t+dt$. If we know the mass of the object we can compute the velocity from the momentum.}
+
+If multiple forces act of the same object, $\vec F$ is the sum of those forces:
+\begin{equation}
+\vec F = \sum_i \vec F_i
+\end{equation}
+where $\vec F_i$ is the force caused by interation $i$ (could be gravity, could be a spiring, etc.). This called {\it d'Alambert's principle}.
+
+\section{Types of forces}
+
+\subsection{Gravity}
+
+\begin{equation}
+\vec F_t^{gravity} \equiv (0, -m_t g, 0) 
+\end{equation}
+where $g = 9.8$meters/second.
+
+\subsection{Spring}
+
+\begin{equation}
+  \vec F_t^{spring} \equiv \kappa (L - |\vec p_t - \vec q_t|) \frac{\vec p_t-\vec q_q}{|\vec p_t-\vec q_t|}
+\end{equation}
+where $\vec p_t$ is the position of the mass at time $t$, $q_t$ is the position of the other end of the spring at the same time, $\kappa$ is a constant that describes the rigidity of the spring, and $L$ is the rest length of the pring. Notice that when $|\vec p_t - \vec q_t|=L$ there is no force, when $|\vec p_t - \vec q_t|>L$ the force is attractive and when $|\vec p_t - \vec q_t|<L$ the force is repulsive. 
+
+\subsection{Friction}
+
+\begin{equation}
+  \vec F_t^{friction} \equiv - \gamma \vec v_t
+\end{equation}
+$\gamma$ is called the {\it friction coefficient}.
+
+\section{Rotations}
+
+A position vector $\vec p$ can be multiplied by a matrix
+\begin{equation}
+\vec p' = R \vec p
+\end{equation}
+The matrix multiplication maps one vector $p$ onto another vector $p'$. If we now require that the matrix $R$ have determinant equal to 1 it follows that for every vector $p$
+\begin{equation}
+|\vec p'| = |R\vec p| = |R||\vec p| = |\vec p|
+\end{equation}
+i.e. the $R$ transformation preserves the vector length. If we also requires that the inverse of $R$ be the same as its transposed ($R^{-1}=R^t$) then, for every two vectors $p$ and $q$ we obtain:
+\begin{equation}
+\vec p' \cdot \vec q' = (R\vec p)\cdot(R\vec q) = \vec p \cdot \vec q
+\end{equation}
+i.e. the $R$ transformation preserves scalar products (and therefore angles).
+A matrix $R$ meeting the two conditions above is called an {\it orthogonal matrix} or a {\it rotation}.
+
+\begin{center}
+\includegraphics[width=5cm]{images/plane.png}
+\end{center}
+
+A rotation of the angle $\theta$ around the $X$-axes can be written as
+\begin{equation}
+R_X(\theta) \equiv \left(\begin{tabular}{ccc}
+1 & 0 & 0 \\
+0 & $\cos(\theta)$ & $-\sin(\theta)$  \\
+0 & $\sin(\theta)$ & $\cos(\theta) $ 
+\end{tabular}\right)
+\end{equation}
+
+A rotation of the angle $\theta$ around the $Y$-axes can be written as
+\begin{equation}
+R_Y(\theta) \equiv \left(\begin{tabular}{ccc}
+$\cos(\theta)$ & 0 & $\sin(\theta)$ \\
+0 & 1 & 0 \\
+$-\sin(\theta)$ & 0 & $\cos(\theta)$ 
+\end{tabular}\right)
+\end{equation}
+
+A rotation of the angle $\theta$ around the $Z$-axes can be written as
+\begin{equation}
+R_Z(\theta) = \left(\begin{tabular}{ccc}
+$\cos(\theta)$ & $-\sin(\theta)$ & 0 \\
+$\sin(\theta)$ & $\cos(\theta)$ & 0 \\
+0 & 0 & 1
+\end{tabular}\right)
+\end{equation}
+
+A rotation of the angle $\theta$ around an arbitrary direction $\hat n = (n_0,n_0,n_1)$ is given by:
+
+\begin{equation}
+R_{\hat n}(\theta) \equiv \left(\begin{tabular}{ccc} 
+$2(n^2_0 s^2 + c^2)-1 $ & $
+  2(n_0 n_1 s^2 - n_2 s c) $ & $ 2(n_0 n_2 s^2 - n_1 s c)$ \\ 
+$2(n_0 n_1 s^2 + n_2 s c) $ & $ 2(n^2_1 s^2 +c^2)-1
+  $ & $ 2(n_1 n_2 s^2-n_0 s c)$ \\ 
+$2(n_0 s c - n_1 s c) $ & $ 2(n_0 s c + n_1 n_2 s^2) $ & 
+  $ 2(n^2_2 s^2 + c^2)-1$
+\end{tabular}\right)
+\end{equation}
+where $c=\cos(\theta/2)$ and $s=\sin(\theta/2)$.
+
+\begin{center}
+\includegraphics[width=5cm]{images/rotation.png}
+\end{center}
+
+For later convenience we will define a four dimension vector (marked by a tilde):
+\begin{equation}
+\tilde \theta = (\theta_0,\theta_1,\theta_2,\theta_3) = (n_0 \sin(\theta/2), n_1 \sin(\theta/2), n_2 \sin(\theta/2),\cos(\theta/2))
+\label{quaternion}
+\end{equation}
+and with a change of variable the matrix of rotation $R_{\hat n}(\theta)$ can be re-written:
+
+\begin{equation}
+R(\tilde \theta) \equiv \left(\begin{tabular}{ccc}
+$2(\theta_0 \theta_0 + \theta_1 \theta_1)-1$ & $2(\theta_0 \theta_1 - \theta_2 \theta_3)$ & $2(\theta_0 \theta_2 - \theta_1 \theta_3) $\\
+$2(\theta_0 \theta_1 + \theta_2 \theta_3)$ & $2(\theta_1 \theta_1 +\theta_3 \theta_3)-1$ & $2(\theta_1 \theta_2-\theta_0 \theta_3) $\\
+$2(\theta_0 \theta_3 - \theta_1 \theta_3)$ & $2(\theta_0 \theta_3 + \theta_1 \theta_2)$ & $2(\theta_2 \theta_2 + \theta_3 \theta_3)-1$
+\end{tabular}\right)
+\label{rotation}
+\end{equation}
+
+The 4-vector $\tilde \theta$ defines an {\it orientation} and it is called a {\it quaternion} although its methematical properties are not relevant here and are not discussed. The associated matrix $R(\tilde \theta)$ can be used to rotates the points of an object into an orientation.
+
+\section{Composition of rotations}
+
+If a body is oriented according to $R(\tilde \theta)$ and it gets rotated by another matrix $R_{\hat n}(\beta)$ the body will end up being oriented in a different direction:
+\begin{equation}
+R(\tilde \theta') = R_{\hat n}(\beta) R(\tilde \theta)
+\end{equation}
+
+What's  $\tilde \theta'$ as function of $\hat n$, $\beta$ and $\tilde \theta$?
+An explicit calculation (omitted) reveals:
+\begin{equation}
+\tilde \theta' = \tilde \theta + \frac{1}{2}\vec \beta \tilde \theta
+\label{theta_update}
+\end{equation}
+where $\vec \beta \tilde \theta$ is defined as 
+\begin{equation}
+\vec \beta \tilde \theta = \left(\begin{tabular}{c}
+$- (\beta_0 \theta_0 + \beta_1 \theta_1 + \beta_2 \theta_2)$ \\
+$(\beta_0 \theta_3 + \beta_1 \theta_2 - \beta_2 \theta_1)$ \\ 
+$(\beta_1 \theta_3 + \beta_2 \theta_0 - \beta_0 \theta_2)$ \\ 
+$(\beta_2 \theta_3 + \beta_0 \theta_1 - \beta_1 \theta_0)$ 
+\label{vxq}
+\end{tabular}\right)
+\end{equation}
+
+where $(\beta_0,\beta_1,\beta_2)=(\beta n_0,\beta n_1,\beta n_2)$
+
+Eq.~\ref{theta_update} will come up handly later when talking about spinning objects. In this case for an infinitesimal rotation $\beta=\omega dt$:
+\begin{equation}
+\tilde \theta' = \tilde \theta + \frac{1}{2}\vec \omega \tilde \theta dt
+\end{equation}
+
+\section{Spinning}
+
+We now consider a rotation propotional to time, $t$. In particular a rotation around a direction $\hat n=(n_0,n_1,n_2)$ of an angle $\theta_t = \omega t$ ($\theta$ depends on $t$). Repeating the previous steps and replacing $\theta_t$ for $\theta$ in eq.~\ref{quaternion} we obtain:
+\begin{equation}
+\tilde \theta_t \equiv (n_0 \sin(\omega t/2), n_1 \sin(\omega t/2), n_2 \sin(\omega t/2),\cos(\omega_t/2))
+\end{equation}
+So if we now consider the position of a vector $\vec p$ subject to rotation we obtain:
+\begin{equation}
+\vec p_t = R(\tilde \theta_t) \vec p
+\end{equation}
+and we can compute it velocity using the definition:
+\begin{eqnarray}
+\vec v_t &=& (\vec p_{t+dt} - \vec p_t)/dt \\
+         &=& (R(\tilde \theta_{t+dt}t) \vec p - R(\tilde \theta_t) \vec p)/dt \\
+         &=& \vec \omega \times \vec p
+\label{vomega}
+\end{eqnarray}
+where
+\begin{equation}
+\vec \omega \equiv (\omega n_0, \omega n_1, \omega n_2)
+\end{equation}
+is called angular velocity.
+
+\section{Newton Second Law for Rotation}
+
+Before we have formulated the second law of Newton as
+\begin{equation}
+\vec F_t = \frac{\vec K_{t+dt}-\vec K_t}{dt}
+\end{equation}
+where $\vec K_t = m_t \vec v_t$.
+We now consider a rigid body comprised of one mass $m$ at position $\vec p$, connected by a solid rod at the origin of the axes. The mass is subject to a force $\vec F$.
+
+If there were no rod, the mass would move according to the Newton equation above. Because of the rod, the mass is not free and it feels only the component of the force ortoghonal to the direction of the rod $\vec r$ which is the same as the position of the mass $\vec p$ because the rod is pinned at the origin of the axes. In order to apply Newton law only to the components orthogonal to $r$ we perform a cross product of both terms
+
+\begin{eqnarray}
+\vec r_t \times \vec F_t &=& \vec r_t \times \frac{\vec  K_{t+dt}-\vec  K_t}{dt} \\
+&=&  \frac{\vec r_t \times\vec K_{t+dt}-\vec r_t \times \vec  K_t}{dt}
+\label{angular}
+\end{eqnarray}
+and if we define the {\it torque} as
+\begin{equation}
+\vec \tau \equiv \vec r \times \vec F
+\end{equation}
+and the {\it angular momentum} as
+\begin{equation}
+\vec L \equiv \vec r \times \vec K = m  \vec r \times \vec v
+\label{angular_momentum}
+\end{equation}
+we can rewrite eq.~\ref{angular} as 
+\begin{equation}
+\vec \tau_ t = \frac{L_{t+dt}-L_t}{dt}
+\label{newton_rot}
+\end{equation}
+which is the anologous of {\it Newton equation for rotations}.
+
+\begin{center}
+\includegraphics[width=5cm]{images/torque.png}
+\end{center}
+
+Notice that if we substiture eq.~\ref{vomega} which gives the velocity in terms of the angualar velocity into eq.~\ref{angular_momentum} we obtain:
+\begin{equation}
+\vec L = \vec r \times (m \vec \omega \times \vec r) = (m |\vec r|^2) \vec \omega
+\label{angular_momentum2}
+\end{equation}
+The coefficient $(m |\vec r|^2)$ is called {\it moment of inertia}.
+
+For a rigid body comprised of many masses rotating at the origin of the axes we can define:
+\begin{equation}
+\vec \tau \equiv \sum_i \vec r_i \times \vec F_i
+\end{equation}
+and
+\begin{equation}
+\vec L \equiv \sum_i \vec r_i \times \vec K_i = m_i  \vec r_i \times \vec v_i
+\label{angular_momentum3}
+\end{equation}
+and eq.~\ref{newton_rot} is still valid, while eq.~\ref{angular_momentum3} becomes:
+\begin{equation}
+\vec L = \sum _i \vec r_i \times (m_i \vec \omega \times \vec r_i) = I \vec \omega
+\label{angular_momentum4}
+\end{equation}
+where $I$ is a 3x3 matrix (technically a tensor) of components:
+\begin{equation}
+I_{jk} \equiv \sum_i m_i (\delta_{jk} |\vec r_i|^2 - r_{i,j} r_{i,k})
+\label{momentum_inertia}
+\end{equation}
+Here $r_{i,j}$ is the $j$-th component (X=0,Y=1, or Z=2) of vector $\vec r_i$.
+
+
+Finally we can augment the Euler integrator with equivelent formulas for rotations:
+\begin{eqnarray}
+\vec F_t =& \sum_i \vec F_i & \qquad \textrm{(compute force)} \\
+\vec \tau_t =& \sum_i \vec r_i \times \vec F_i & \qquad \textrm{(compute torque)}\\
+\vec v_{t} =& m_t^{-1}\vec K_{t} & \qquad \textrm{(compute velocity)}\\
+\vec \omega_t =& I_t^{-1} L_t & \qquad \textrm{(compute angular velocity)}\\
+\vec p_{t+dt} =& \vec p_t + \vec v_t dt & \qquad \textrm{(update position)}\\
+\vec K_{t+dt} =& \vec K_t + \vec F_t dt & \qquad \textrm{(update momentum)}\\
+% \tilde \theta_{t+dt} =& \tilde \theta_t + \frac{1}{2} \vec \omega_t \tilde \theta_t dt &  \qquad \textrm{(update orientation)}\\
+R_t = & R(\omega_dt dt) R_t & \qquad \textrm{(update orientation)}\\
+\vec L_{t+dt} =& \vec L_t + \vec \tau_t dt & \qquad \textrm{(update angular momentum)}
+\label{euler22}
+\end{eqnarray}
+
+In other words: {\it If we know the state of the rigid body characterized by the position $p_t$ and momentum $K_t$ of its center of mass, if we know its orientation $T_t$ and its angular momentum $L_t$, and if we know the total force $F_t$ and the total torque $\tau_t$ acting on the body, we can compute new state of the rigid body ($p,K,R,L$) at time $t+dt$.}
+
+Given the position $p_t$ of the center of mass of the body and its orientation $\tilde \theta_t$, a generic point $\vec r_i$ of the body, can be rotated and translated into the global reference frame according to:
+\begin{equation}
+R_t \vec r_i + p_t
+\end{equation}
+and the velocity of the point is
+\begin{equation}
+\vec \omega_t \times \vec r_i + \vec v_t
+\end{equation}
+
+%($R(...)$ is described in eq.~\ref{rotation}).
+
+\section{Assembling Rigid Bodies}
+
+Consider a composite rigid body whose parts are smaller rigid bodies characterized by
+\begin{center}
+\begin{tabular}{cccc} \hline
+Component & Position & Mass & Moment of Inertial \\ \hline
+0 & $\vec p_0$ & $m_0$ & $I_0$ \\ 
+1 & $\vec p_1$ & $m_1$ & $I_1$ \\ 
+2 & $\vec p_2$ & $m_2$ & $I_2$ \\ 
+... & ... & ... & ... \\ \hline
+\end{tabular}
+\end{center}
+
+The composite object will have:
+\begin{eqnarray}
+m_{total} &=& \sum_i m_i \\
+\vec p_{cm} &=& \sum \vec p_i m_i/m_{total} \\
+I_{total} &=& \sum_i I_i + \Delta I(m_i, \vec p_i - \vec p_{total})
+\end{eqnarray}
+where
+\begin{equation}
+\Delta I(m, \vec r)_{jk} \equiv m (\delta_{jk} |\vec r|^2 - r_j r_k)
+\end{equation}
+
+\section{Collisions}
+
+Given the velocities of two bodies $\vec v_A$ and $\vec v_B$ before a collision we want to determine the velocities of the bodies after the collision, $\vec v'_A$ and $\vec v'_B$. The separating velocity (relative velocity after the collision) is defined as:
+\begin{equation}
+\vec v_{separating} \equiv \vec v'_B - \vec v'_A
+\end{equation}
+If it is a faction of the closing velocity (relative velocity before the collision):
+\begin{equation}
+\vec v_{separating} = -c \vec v_{closing}
+\end{equation}
+where $c$ is a restitution coefficient and 
+\begin{equation}
+\vec v_{closing} \equiv \vec v_B - \vec v_A
+\end{equation}
+Conservation of momentum and the above relation between closing and separating velocity yields:
+\begin{eqnarray}
+\vec v'_A &=& \vec v_A + \frac{m_B}{m_A+m_B}(c+1)(\vec v_B-\vec v_A) \\
+\vec v'_B &=& \vec v_B + \frac{m_A}{m_A+m_B}(c+1)(\vec v_A-\vec v_B)
+\end{eqnarray}
+
+In the case of collision of the object A with a plane B or other object of infinite mass
+\begin{equation}
+\vec v'_A = \lim_{m_B-\rightarrow \infty} \vec v_A + \frac{m_B}{m_A+m_B}(c+1)(\vec v_B-\vec v_A) = \vec v_A + (c+1)(\vec v_B-\vec v_A)
+\end{equation}
+
+Also notice that if the two bodies get stuck to each other during the collision, then $c=0$ and
+\begin{eqnarray}
+\vec v'_A &=& \vec v_A + \frac{m_B}{m_A+m_B}(\vec v_B-\vec v_A) \\
+\vec v'_B &=& \vec v_B + \frac{m_A}{m_A+m_B}(\vec v_A-\vec v_B) = \vec v'_A
+\end{eqnarray}
+the two bodies will be moving at the same velocity (the center of mass velocity).
+
+[TO BE CONTINUED ...]
+
+\section{Implementation}
+
+\include{implementation}
+
+\section{Appendix}
+
+\section{Notation}
+
+3D Vectors are indicated with a {\it vector} on top, as in $\vec p$. The norm of a vector is indicated with $|\vec p|$ or with the same letter as the vector without decoration, $p$. The direction of a vector $\vec p/p$ is indicated with a {\it hat}, $\hat p$ and it is called a {\it verson}.
+
+4D Vectors (used here to represent quaternions) are marked with a {\it tilde} superscript, as in $\tilde \theta$.
+
+We use the letter $t$ to label time, the label $i$ to label parts of a system (for example components of a rigid body), the labels $j=0,1,2=X,Y,Z$ and $k=0,1,2=X,Y,Z$ to indicate components of a vector. Quaternions also have an extra index $j,k=W=3$.
+
+\subsection{Legend}
+
+\begin{tabular}{|l|c|} \hline
+Name & Symbol \\ \hline
+position & $\vec p$ \\
+velocity & $\vec v = \dot p$ \\
+acceleration & $\vec a$ \\
+momentum & $\vec K = m \vec v$ \\
+mass & $m$ \\
+force & $\vec F$ \\
+% orientation & $\tilde{\theta}$ \\
+rotation & $R$ \\
+angular velocity & $\vec \omega$ \\
+angular accelleration & $\vec \alpha$ \\
+angular momentum & $\vec L = I \vec \omega$ \\
+moment of inertia & $I$ \\ \hline
+\end{tabular}
+
+\end{document}

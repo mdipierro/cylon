@@ -1,0 +1,16 @@
+\contentsline {section}{\numberline {1}Newton}{2}
+\contentsline {section}{\numberline {2}Revised Newton}{3}
+\contentsline {section}{\numberline {3}Types of forces}{4}
+\contentsline {subsection}{\numberline {3.1}Gravity}{4}
+\contentsline {subsection}{\numberline {3.2}Spring}{4}
+\contentsline {subsection}{\numberline {3.3}Friction}{4}
+\contentsline {section}{\numberline {4}Rotations}{5}
+\contentsline {section}{\numberline {5}Composition of rotations}{7}
+\contentsline {section}{\numberline {6}Spinning}{7}
+\contentsline {section}{\numberline {7}Newton Second Law for Rotation}{8}
+\contentsline {section}{\numberline {8}Assembling Rigid Bodies}{10}
+\contentsline {section}{\numberline {9}Collisions}{11}
+\contentsline {section}{\numberline {10}Implementation}{11}
+\contentsline {section}{\numberline {11}Appendix}{19}
+\contentsline {section}{\numberline {12}Notation}{19}
+\contentsline {subsection}{\numberline {12.1}Legend}{19}
