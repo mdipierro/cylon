@@ -364,7 +364,7 @@ Finally we can augment the Euler integrator with equivelent formulas for rotatio
 \vec p_{t+dt} =& \vec p_t + \vec v_t dt & \qquad \textrm{(update position)}\\
 \vec K_{t+dt} =& \vec K_t + \vec F_t dt & \qquad \textrm{(update momentum)}\\
 % \tilde \theta_{t+dt} =& \tilde \theta_t + \frac{1}{2} \vec \omega_t \tilde \theta_t dt &  \qquad \textrm{(update orientation)}\\
-R_t = & R(\omega_dt dt) R_t & \qquad \textrm{(update orientation)}\\
+R_t = & R(\omega_t dt) R_t & \qquad \textrm{(update orientation)}\\
 \vec L_{t+dt} =& \vec L_t + \vec \tau_t dt & \qquad \textrm{(update angular momentum)}
 \label{euler22}
 \end{eqnarray}
@@ -408,6 +408,8 @@ where
 
 \section{Collisions}
 
+Let's first consider particles instead of rigid bodies.
+
 Given the velocities of two bodies $\vec v_A$ and $\vec v_B$ before a collision we want to determine the velocities of the bodies after the collision, $\vec v'_A$ and $\vec v'_B$. The separating velocity (relative velocity after the collision) is defined as:
 \begin{equation}
 \vec v_{separating} \equiv \vec v'_B - \vec v'_A
@@ -415,6 +417,7 @@ Given the velocities of two bodies $\vec v_A$ and $\vec v_B$ before a collision 
 If it is a faction of the closing velocity (relative velocity before the collision):
 \begin{equation}
 \vec v_{separating} = -c \vec v_{closing}
+\label{collision}
 \end{equation}
 where $c$ is a restitution coefficient and 
 \begin{equation}
@@ -422,13 +425,17 @@ where $c$ is a restitution coefficient and
 \end{equation}
 Conservation of momentum and the above relation between closing and separating velocity yields:
 \begin{eqnarray}
-\vec v'_A &=& \vec v_A + \frac{m_B}{m_A+m_B}(c+1)(\vec v_B-\vec v_A) \\
-\vec v'_B &=& \vec v_B + \frac{m_A}{m_A+m_B}(c+1)(\vec v_A-\vec v_B)
+\vec v'_A &=& \vec v_A + d{\vec F}/{m_A} \\
+\vec v'_B &=& \vec v_B - d{\vec F}/{m_B} 
 \end{eqnarray}
+where
+\begin{equation}
+d{\vec F} = \frac{(c+1)(\vec v_B-\vec v_A)}{1/m_A+1/m_B}
+\end{equation}
 
 In the case of collision of the object A with a plane B or other object of infinite mass
 \begin{equation}
-\vec v'_A = \lim_{m_B-\rightarrow \infty} \vec v_A + \frac{m_B}{m_A+m_B}(c+1)(\vec v_B-\vec v_A) = \vec v_A + (c+1)(\vec v_B-\vec v_A)
+\vec v'_A = \lim_{m_B-\rightarrow \infty} \vec v_A + \frac{\vec{dF}}{m_A} = \vec v_A + (c+1)(\vec v_B-\vec v_A)
 \end{equation}
 
 Also notice that if the two bodies get stuck to each other during the collision, then $c=0$ and
@@ -438,7 +445,32 @@ Also notice that if the two bodies get stuck to each other during the collision,
 \end{eqnarray}
 the two bodies will be moving at the same velocity (the center of mass velocity).
 
-[TO BE CONTINUED ...]
+In the case of rigid bodies eq.~\ref{collision} applies to the points of contact between two rigid bodies. To properly consider its effect on the entire body we have to rewrite the velocity in terms of the velocities of the center of mass plus a component due to the angular velocity.
+
+\begin{equation}
+d{\vec F} = \frac {-(c+1) (\vec v_{cB} - \vec v_{cA}) \cdot \hat n}{1/m_A+1/m_B + |\vec r_{cA} \times \hat n|^2 / I_A + |\vec r_{cB} \times \hat n|^2 / I_B}\hat n
+\label{impulse}
+\end{equation}
+
+where $\vec r_{cA}$ is the point of collision of body A respect to the center of mass $\vec p_A$, $\vec v_{cA}$ is the velocity of the collision point before the collision, $m_A$ is the mass of body A, $I_A$ is its moment of inertia. $\hat n$ is the direction of $(\vec p_B+\vec r'_B)-(\vec p_A+\vec r'_B)$, i.e. the norm ortogonal to the contact. Notice that $\vec r_{cA} = R_A\vec r_A$ and $\vec v_{cA} = \vec \omega_A \times \vec r_A + \vec v_A$. The same for $B$.
+
+Once this impluse is computed we can deal with the it for each body by adding the contribution of the impulse to force and torque.
+
+\begin{eqnarray}
+\vec F_A &=& ... + d\vec F/dt \\
+\vec \tau_A &=& ... + \vec r_{cA} \times d \vec F/dt \\
+\vec F_B &=& ... - d\vec F/dt \\
+\vec \tau_B &=& ... - \vec r_{cB} \times d\vec F/dt 
+\label{impulse2}
+\end{eqnarray}
+
+For if two objects we do the following:
+\begin{itemize}
+\item find the point of contact and compute $r_{cA}$, $r_{cB}$
+\item find the compenetration and shift the objects back to cancel compenetration
+\item compute the impulse (eq.~\ref{impulse})
+\item update the force and torque to include one time contributon of the impulse (eq.~\ref{impulse2}).
+\end{itemize}
 
 \section{Implementation}
 

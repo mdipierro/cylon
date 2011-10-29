@@ -1,0 +1,5 @@
+*~
+docs/*.log
+docs/*.aux
+docs/*.idx
+docs/*.toc
