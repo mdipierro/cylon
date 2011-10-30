@@ -83,7 +83,7 @@ public:
 
 class Rotation : public Matrix {
 public:
-  Rotation() { m[X][X]=m[Y][Y]=m[Z][Z]=1; }
+  Rotation() { forXYZ(i) forXYZ(j) m[i][j]=(i==j)?1:0; }
   Rotation(const Vector& v) {
     float theta = sqrt(v*v);
     if(theta<PRECISION) {
@@ -92,9 +92,9 @@ public:
       float s = sin(theta), c=cos(theta);
       float t = 1-c;
       float x = v(X)/theta, y = v(Y)/theta, z = v(Z)/theta;
-      m[X][X]=t*x*x+c;   m[X][Y]=t*x*y+s*z; m[X][Z]=t*x*z-s*y;
-      m[Y][X]=t*x*y-s*z; m[Y][Y]=t*y*y+c;   m[Y][Z]=t*y*z+s*x;
-      m[Z][X]=t*x*z+s*y; m[Z][Y]=t*y*z-s*x; m[Z][Z]=t*z*z+x;
+      m[X][X]=t*x*x+c;   m[X][Y]=t*x*y-s*z; m[X][Z]=t*x*z+s*y;
+      m[Y][X]=t*x*y+s*z; m[Y][Y]=t*y*y+c;   m[Y][Z]=t*y*z-s*x;
+      m[Z][X]=t*x*z-s*y; m[Z][Y]=t*y*z+s*x; m[Z][Z]=t*z*z+c;
     }
   }
 };
@@ -234,6 +234,9 @@ public:
   }
 };
 
+/**
+ * Spring Forces
+ */
 class SpringForce : public Force {
 public:
   Body *bodyA;
@@ -301,6 +304,8 @@ public:
   list<Force*> forces;
   list<Body*>::iterator body;
   list<Force*>::iterator force;
+  int frame;
+  Universe() { frame=0; }
   // evolve universe
   void evolve(float dt) {
     // clear forces and troques
@@ -309,19 +314,35 @@ public:
     // compute forces and torques
     for(force=forces.begin(); force!=forces.end(); force++)
       (*force)->apply(); // adds to F and tau
+    // test: give it a kick
+    if(frame==2000) {
+      (*bodies.begin())->F=Vector(5,5,0);
+      (*bodies.begin())->tau=Vector(0,0,2);
+    }
     // integrate
     for(body=bodies.begin(); body!=bodies.end(); body++) 
       if(!(*body)->locked)
 	(*body)->integrator(dt);
-    // handle collisions
-    for(body=bodies.begin(); body!=bodies.end(); body++)             
+    // handle collisions (not quite right yet)
+    for(body=bodies.begin(); body!=bodies.end(); body++)                   
       if(!(*body)->locked) {
 	if((*body)->p(Y)<0) {
 	  (*body)->p(Y)=0;
 	  (*body)->K(Y)=-0.9*(*body)->K(Y);
 	  (*body)->L = 0.9*(*body)->L;
 	}
+	if((*body)->p(X)<-2.3) {
+	  (*body)->p(X)=-2.3;
+	  (*body)->K(X)=-0.9*(*body)->K(X);
+	  (*body)->L = 0.9*(*body)->L;
+	}
+	if((*body)->p(X)>2.3) {
+	  (*body)->p(X)=2.3;
+	  (*body)->K(X)=-0.9*(*body)->K(X);
+	  (*body)->L = 0.9*(*body)->L;
+	}
       }
+    frame++;
   }
 };
 

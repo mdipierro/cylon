@@ -200,19 +200,16 @@ $\sin(\theta)$ & $\cos(\theta)$ & 0 \\
 \end{tabular}\right)
 \end{equation}
 
-A rotation of the angle $\theta$ around an arbitrary direction $\hat n = (n_0,n_0,n_1)$ is given by:
+A rotation of the angle $\theta$ around an arbitrary direction $\hat n = (n_x,n_y,n_z)$ is given by:
 
 \begin{equation}
 R_{\hat n}(\theta) \equiv \left(\begin{tabular}{ccc} 
-$2(n^2_0 s^2 + c^2)-1 $ & $
-  2(n_0 n_1 s^2 - n_2 s c) $ & $ 2(n_0 n_2 s^2 - n_1 s c)$ \\ 
-$2(n_0 n_1 s^2 + n_2 s c) $ & $ 2(n^2_1 s^2 +c^2)-1
-  $ & $ 2(n_1 n_2 s^2-n_0 s c)$ \\ 
-$2(n_0 s c - n_1 s c) $ & $ 2(n_0 s c + n_1 n_2 s^2) $ & 
-  $ 2(n^2_2 s^2 + c^2)-1$
+$t*n_x*n_x+c$ & $t*n_x*n_y-s*n_z$ & $t*n_x*n_z+s*n_y$ \\
+$t*n_x*n_y+s*n_z$ & $t*n_y*n_y+c$ & $t*n_y*n_z-s*n_x$ \\
+$t*n_x*n_z-s*n_y$ & $t*n_y*n_z+s*n_x$ & $t*n_z*n_z+c$
 \end{tabular}\right)
 \end{equation}
-where $c=\cos(\theta/2)$ and $s=\sin(\theta/2)$.
+where $c=\cos(\theta)$ and $s=\sin(\theta)$ and $t=(1-\cos(\theta))$.
 
 \begin{center}
 \includegraphics[width=5cm]{images/rotation.png}
@@ -220,7 +217,7 @@ where $c=\cos(\theta/2)$ and $s=\sin(\theta/2)$.
 
 For later convenience we will define a four dimension vector (marked by a tilde):
 \begin{equation}
-\tilde \theta = (\theta_0,\theta_1,\theta_2,\theta_3) = (n_0 \sin(\theta/2), n_1 \sin(\theta/2), n_2 \sin(\theta/2),\cos(\theta/2))
+\tilde \theta = (\theta_0,\theta_1,\theta_2,\theta_3) = (n_x \sin(\theta/2), n_y \sin(\theta/2), n_z \sin(\theta/2),\cos(\theta/2))
 \label{quaternion}
 \end{equation}
 and with a change of variable the matrix of rotation $R_{\hat n}(\theta)$ can be re-written:
@@ -260,7 +257,7 @@ $(\beta_2 \theta_3 + \beta_0 \theta_1 - \beta_1 \theta_0)$
 \end{tabular}\right)
 \end{equation}
 
-where $(\beta_0,\beta_1,\beta_2)=(\beta n_0,\beta n_1,\beta n_2)$
+where $(\beta_0,\beta_1,\beta_2)=(\beta n_x,\beta n_y,\beta n_z)$
 
 Eq.~\ref{theta_update} will come up handly later when talking about spinning objects. In this case for an infinitesimal rotation $\beta=\omega dt$:
 \begin{equation}
@@ -269,9 +266,9 @@ Eq.~\ref{theta_update} will come up handly later when talking about spinning obj
 
 \section{Spinning}
 
-We now consider a rotation propotional to time, $t$. In particular a rotation around a direction $\hat n=(n_0,n_1,n_2)$ of an angle $\theta_t = \omega t$ ($\theta$ depends on $t$). Repeating the previous steps and replacing $\theta_t$ for $\theta$ in eq.~\ref{quaternion} we obtain:
+We now consider a rotation propotional to time, $t$. In particular a rotation around a direction $\hat n=(n_x,n_y,n_z)$ of an angle $\theta_t = \omega t$ ($\theta$ depends on $t$). Repeating the previous steps and replacing $\theta_t$ for $\theta$ in eq.~\ref{quaternion} we obtain:
 \begin{equation}
-\tilde \theta_t \equiv (n_0 \sin(\omega t/2), n_1 \sin(\omega t/2), n_2 \sin(\omega t/2),\cos(\omega_t/2))
+\tilde \theta_t \equiv (n_x \sin(\omega t/2), n_y \sin(\omega t/2), n_z \sin(\omega t/2),\cos(\omega_t/2))
 \end{equation}
 So if we now consider the position of a vector $\vec p$ subject to rotation we obtain:
 \begin{equation}
@@ -286,7 +283,7 @@ and we can compute it velocity using the definition:
 \end{eqnarray}
 where
 \begin{equation}
-\vec \omega \equiv (\omega n_0, \omega n_1, \omega n_2)
+\vec \omega \equiv (\omega n_x, \omega n_y, \omega n_z)
 \end{equation}
 is called angular velocity.
 
