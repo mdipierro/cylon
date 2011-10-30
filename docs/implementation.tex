@@ -23,7 +23,7 @@ Define constants
 \begin{lstlisting}
 #define array vector // to avoid name collions
 #define forXYZ(i) for(int i=0; i<3; i++)
-const float PRECISION = 0.0001;
+const float PRECISION = 0.00001;
 const int X=0;
 const int Y=1;
 const int Z=2;
@@ -87,7 +87,7 @@ public:
   Rotation(const Vector& v) {
     float theta = sqrt(v*v);
     if(theta<PRECISION) {
-      m[X][X]=m[Y][Y]=m[Z][Z]=1;
+      forXYZ(i) forXYZ(j) m[i][j] = (i==j)?1:0;
     } else {
       float s = sin(theta), c=cos(theta);
       float t = 1-c;
@@ -419,7 +419,6 @@ void createWindow(const char* title) {
 }
 
 Universe myuniverse;
-int frame=0;
 \end{lstlisting}
 
 Called each frame to update the 3D scene. Delegates to
@@ -430,7 +429,6 @@ void update() {
   float timeStep = 0.016f;	// 60fps fixed rate.
   myuniverse.evolve(timeStep);
   glutPostRedisplay();
-  frame+=1;
 }
 \end{lstlisting}
 
@@ -504,11 +502,10 @@ int main(int argc, char** argv) {
   createWindow("GPNS");
   Body b = Body();
   b.loadObj("assets/sphere.obj");
-  b.F = Vector(0,-0.01,0);
   b.p = Vector(0,2,0);
   b.L = Vector(0.1,0,0);
   myuniverse.bodies.push_back(&b);
-  myuniverse.forces.push_back(new GravityForce(&b,0.1));
+  myuniverse.forces.push_back(new GravityForce(&b,0.01));
 
   // Set up the appropriate handler functions
   glutReshapeFunc(reshape);
