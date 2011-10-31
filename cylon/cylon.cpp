@@ -23,6 +23,7 @@ using namespace std;
  */
 #define array vector // to avoid name collions
 #define forXYZ(i) for(int i=0; i<3; i++)
+#define OBJ(x) (*(*x))
 const float PRECISION = 0.00001;
 const int X=0;
 const int Y=1;
@@ -41,6 +42,9 @@ public:
   }
   float operator()(int i) const { return v[i]; }
   float &operator()(int i) { return v[i]; }
+  const Vector &operator+=(const Vector &w) {
+    forXYZ(i) v[i]+=w(i); return (*this);
+  }
 };
 
 /**
@@ -372,6 +376,7 @@ public:
  */ 
 class Universe {
 public:
+  float dt;
   set<Body*> bodies;
   set<Force*> forces;
   set<Constraint*> constraints;
@@ -379,26 +384,36 @@ public:
   set<Force*>::iterator force;
   set<Constraint*>::iterator constraint;
   int frame;
-  Universe() { frame=0; }
+  Universe() {
+    frame=0;
+  }
+  ~Universe() { 
+    for(body=bodies.begin(); body!=bodies.end(); body++)
+      delete (*body);
+    for(force=forces.begin(); force!=forces.end(); force++)
+      delete (*force);
+    for(constraint=constraints.begin();
+        constraint!=constraints.end(); constraint++)
+      delete (*constraint);
+  }
   // evolve universe
-  void evolve(float dt) {    
+  void evolve() {    
     // clear forces and troques
     for(body=bodies.begin(); body!=bodies.end(); body++)
-      (*body)->clear();
+      OBJ(body).clear();
     // compute forces and torques
     for(force=forces.begin(); force!=forces.end(); force++)
-      (*force)->apply(dt); // adds to F and tau
-    // test: give it a kick
+      OBJ(force).apply(dt); // adds to F and tau
     callback();
     // integrate
     for(body=bodies.begin(); body!=bodies.end(); body++) 
-      if(!(*body)->locked)
-	(*body)->integrator(dt);
+      if(!OBJ(body).locked)
+	OBJ(body).integrator(dt);
     // handle collisions (not quite right yet)
     for(constraint=constraints.begin();
 	constraint!=constraints.end(); constraint++)
-      if((*constraint)->detect())
-	(*constraint)->resolve(dt);
+      if(OBJ(constraint).detect())
+	OBJ(constraint).resolve(dt);
     frame++;
   }
 public:
@@ -533,13 +548,7 @@ public:
       b_old = b;
     }
   }
-  void callback() {
-    // kick the ball
-    if(frame==2500) {
-      (*bodies.begin())->F=Vector(10,10,0);
-      (*bodies.begin())->tau=Vector(0,0,2);
-      }
-  }
+  void callback() {}
 };
 
 MyUniverse universe;
@@ -550,8 +559,8 @@ MyUniverse universe;
  */
 void update() {
   // evolve world
-  float timeStep = 0.016f;	// 60fps fixed rate.
-  universe.evolve(timeStep);
+  universe.dt = 0.016f;	// 60fps fixed rate.
+  universe.evolve();
   glutPostRedisplay();
 }
 
@@ -608,7 +617,11 @@ void mouse(int button, int state, int x, int y) { }
  */
 void keyboard(unsigned char key, int x, int y) {
   // Note we omit passing on the x and y: they are rarely needed.
-  //Process keyboard
+  // kick the ball
+  if(key==32) {
+    OBJ(universe.bodies.begin()).K+=Vector(10,10,0)*universe.dt;
+    OBJ(universe.bodies.begin()).L+=Vector(0,0,2)*universe.dt;
+  }
 }
 
 /**
