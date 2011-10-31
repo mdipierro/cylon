@@ -19,7 +19,7 @@
 using namespace std;
 
 /**
- * Define constants
+ * Define macros and constants
  */
 #define array vector // to avoid name collions
 #define forXYZ(i) for(int i=0; i<3; i++)
@@ -64,10 +64,17 @@ Vector operator-(const Vector &v, const Vector &w) {
 float operator*(const Vector &v, const Vector &w) {
   return v(X)*w(X) + v(Y)*w(Y) + v(Z)*w(Z);
 }
+float norm(const Vector &v) {
+  return sqrt(v*v);
+}
+Vector versor(const Vector &v) {
+  float d=norm(v);
+  return (d>0)?(v/d):v;
+}
 Vector cross(const Vector &v, const Vector &w) {
   return Vector(v(Y)*w(Z)-v(Z)*w(Y),
-		 v(Z)*w(X)-v(X)*w(Z),
-		 v(X)*w(Y)-v(Y)*w(Z));
+		v(Z)*w(X)-v(X)*w(Z),
+		v(X)*w(Y)-v(Y)*w(X));
 }
 
 /**
@@ -85,7 +92,7 @@ class Rotation : public Matrix {
 public:
   Rotation() { forXYZ(i) forXYZ(j) m[i][j]=(i==j)?1:0; }
   Rotation(const Vector& v) {
-    float theta = sqrt(v*v);
+    float theta = norm(v);    
     if(theta<PRECISION) {
       forXYZ(i) forXYZ(j) m[i][j] = (i==j)?1:0;
     } else {
@@ -253,7 +260,7 @@ public:
   }
   void apply(float dt) {
     Vector d = bodyB->vertices[iB]-bodyA->vertices[iA];
-    float n = sqrt(d*d);
+    float n = norm(d);
     if(n>PRECISION) {
       Vector F = kappa*(n-L)*(d/n);
       bodyA->F = bodyA->F+F;
@@ -278,7 +285,7 @@ public:
   }
   void apply(float dt) {
     Vector d = body->vertices[i]-pin;
-    float n = sqrt(d*d);
+    float n = norm(d);
     Vector F = kappa*(n-L)*d/n;
     body->F = body->F+F;
     body->tau = body->tau + cross(body->Rr[i],F);
@@ -350,10 +357,13 @@ public:
     // move the object back is stuck on plane 
     body->p = body->p - penetration*n;
     float K_ortho = n*body->K;
+    // optional, deal with friction 
+    Vector L_ortho = -(body->radius)*cross(n,body->K-K_ortho);
+    Vector L_hat = versor(L_ortho);
+    body->L = body->L - (body->L*L_hat)*L_hat + L_ortho;
     // reverse momentum
     if(K_ortho>0)
       body->K = body->K - (restitution+1)*(K_ortho)*n;
-    // body->L = restitution*(body->L);
   }
 };
 
@@ -392,7 +402,7 @@ public:
     frame++;
   }
   void callback() {
-    if(frame==2000) {
+    if(frame==2001) {
       (*bodies.begin())->F=Vector(5,5,0);
       (*bodies.begin())->tau=Vector(0,0,2);
     }
@@ -456,6 +466,7 @@ void Body::loadObj(const string & file) {
 	  float x,y,z;
 	  instream >> x >> y >> z;
 	  r.push_back(Vector(x,y,z));
+	  radius = max(radius,norm(Vector(x,y,z)));
 	} else if (initialVal=="f") {
 	  int v1, v2, v3;
 	  instream >> v1 >> v2 >> v3;
@@ -576,7 +587,7 @@ void build_universe() {
   for(int i=0; i<4; i++) {
     Body *b = new Body();
     b->loadObj("assets/sphere.obj");
-    b->p = Vector(i,i+1,-i);
+    b->p = Vector(i,i+2,-i);
     b->K = Vector(0.1*i,0.01*i,0);
     b->L = Vector(0.1,0.1*i,0);
     universe.bodies.insert(b);
@@ -584,13 +595,13 @@ void build_universe() {
     universe.constraints.insert(
       new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
     universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(2.5,0,0),Vector(1,0,0)));
+      new PlaneConstraint(b,0.9,Vector(4,0,0),Vector(1,0,0)));
     universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(-2.5,0,0),Vector(-1,0,0)));
+      new PlaneConstraint(b,0.9,Vector(-4,0,0),Vector(-1,0,0)));
     universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(0,0,1),Vector(0,0,1)));
+      new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,0,1)));
     universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(0,0,-4),Vector(0,0,-1)));
+      new PlaneConstraint(b,0.9,Vector(0,0,-5),Vector(0,0,-1)));
     // universe.forces.insert(new FrictionForce(b,0.5));
     if(i==2)
       universe.forces.insert(new SpringForce(b_old,0,b,0,0.01,0));

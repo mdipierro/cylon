@@ -19,7 +19,7 @@ Import the necessary libraries
 using namespace std;
 \end{lstlisting}
 
-Define constants
+Define macros and constants
 \begin{lstlisting}
 #define array vector // to avoid name collions
 #define forXYZ(i) for(int i=0; i<3; i++)
@@ -64,6 +64,13 @@ Vector operator-(const Vector &v, const Vector &w) {
 float operator*(const Vector &v, const Vector &w) {
   return v(X)*w(X) + v(Y)*w(Y) + v(Z)*w(Z);
 }
+float norm(const Vector &v) {
+  return sqrt(v*v);
+}
+Vector versor(const Vector &v) {
+  float d=norm(v);
+  return (d>0)?(v/d):v;
+}
 Vector cross(const Vector &v, const Vector &w) {
   return Vector(v(Y)*w(Z)-v(Z)*w(Y),
 		 v(Z)*w(X)-v(X)*w(Z),
@@ -85,7 +92,7 @@ class Rotation : public Matrix {
 public:
   Rotation() { forXYZ(i) forXYZ(j) m[i][j]=(i==j)?1:0; }
   Rotation(const Vector& v) {
-    float theta = sqrt(v*v);
+    float theta = norm(v);    
     if(theta<PRECISION) {
       forXYZ(i) forXYZ(j) m[i][j] = (i==j)?1:0;
     } else {
@@ -253,7 +260,7 @@ public:
   }
   void apply(float dt) {
     Vector d = bodyB->vertices[iB]-bodyA->vertices[iA];
-    float n = sqrt(d*d);
+    float n = norm(d);
     if(n>PRECISION) {
       Vector F = kappa*(n-L)*(d/n);
       bodyA->F = bodyA->F+F;
@@ -278,7 +285,7 @@ public:
   }
   void apply(float dt) {
     Vector d = body->vertices[i]-pin;
-    float n = sqrt(d*d);
+    float n = norm(d);
     Vector F = kappa*(n-L)*d/n;
     body->F = body->F+F;
     body->tau = body->tau + cross(body->Rr[i],F);
