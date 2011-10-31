@@ -360,7 +360,7 @@ public:
     // optional, deal with friction 
     Vector L_ortho = -(body->radius)*cross(n,body->K-K_ortho);
     Vector L_hat = versor(L_ortho);
-    body->L = body->L - (body->L*L_hat)*L_hat + L_ortho;
+    body->L = (n*body->L)*n + L_ortho;
     // reverse momentum
     if(K_ortho>0)
       body->K = body->K - (restitution+1)*(K_ortho)*n;
@@ -402,8 +402,9 @@ public:
     frame++;
   }
   void callback() {
-    if(frame==2001) {
-      (*bodies.begin())->F=Vector(5,5,0);
+    // kick the ball
+    if(frame==2500) {
+      (*bodies.begin())->F=Vector(10,10,0);
       (*bodies.begin())->tau=Vector(0,0,2);
     }
   }
@@ -589,7 +590,7 @@ void build_universe() {
     b->loadObj("assets/sphere.obj");
     b->p = Vector(i,i+2,-i);
     b->K = Vector(0.1*i,0.01*i,0);
-    b->L = Vector(0.1,0.1*i,0);
+    b->L = Vector(0.5,0.5*i,0);
     universe.bodies.insert(b);
     universe.forces.insert(new GravityForce(b,0.01));
     universe.constraints.insert(
