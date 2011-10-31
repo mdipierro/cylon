@@ -518,9 +518,9 @@ public:
       bodies.insert(b);
       forces.insert(new GravityForce(b,0.01));
       constraints.insert(
-	new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
+        new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
       constraints.insert(
-	new PlaneConstraint(b,0.9,Vector(4,0,0),Vector(1,0,0)));
+        new PlaneConstraint(b,0.9,Vector(4,0,0),Vector(1,0,0)));
       constraints.insert(
         new PlaneConstraint(b,0.9,Vector(-4,0,0),Vector(-1,0,0)));
       constraints.insert(
