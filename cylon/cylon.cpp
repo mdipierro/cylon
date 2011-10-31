@@ -8,7 +8,7 @@
 
 #include "math.h"
 #include "vector"
-#include "list"
+#include "set"
 
 #if defined(_MSC_VER)
 #include <gl/glut.h>
@@ -353,6 +353,7 @@ public:
     // reverse momentum
     if(K_ortho>0)
       body->K = body->K - (restitution+1)*(K_ortho)*n;
+    // body->L = restitution*(body->L);
   }
 };
 
@@ -361,12 +362,12 @@ public:
  */ 
 class Universe {
 public:
-  array<Body*> bodies;
-  array<Force*> forces;
-  array<Constraint*> constraints;
-  array<Body*>::iterator body;
-  array<Force*>::iterator force;
-  array<Constraint*>::iterator constraint;
+  set<Body*> bodies;
+  set<Force*> forces;
+  set<Constraint*> constraints;
+  set<Body*>::iterator body;
+  set<Force*>::iterator force;
+  set<Constraint*>::iterator constraint;
   int frame;
   Universe() { frame=0; }
   // evolve universe
@@ -378,10 +379,7 @@ public:
     for(force=forces.begin(); force!=forces.end(); force++)
       (*force)->apply(dt); // adds to F and tau
     // test: give it a kick
-    if(frame==2000) {
-      (*bodies.begin())->F=Vector(5,5,0);
-      (*bodies.begin())->tau=Vector(0,0,2);
-    }
+    callback();
     // integrate
     for(body=bodies.begin(); body!=bodies.end(); body++) 
       if(!(*body)->locked)
@@ -392,6 +390,12 @@ public:
       if((*constraint)->detect())
 	(*constraint)->resolve(dt);
     frame++;
+  }
+  void callback() {
+    if(frame==2000) {
+      (*bodies.begin())->F=Vector(5,5,0);
+      (*bodies.begin())->tau=Vector(0,0,2);
+    }
   }
 };
 
@@ -414,7 +418,7 @@ Body operator+(const Body &a, const Body &b) {
   c.m = (a.m+b.m);
   c.p = (a.m*a.p + b.m+b.p)/c.m;
   c.K = a.K+b.K;
-  c.L = a.L+b.L;
+  c.L = (a.p-c.p)*a.K+(b.p-c.p)*b.K;
   Vector da = a.p-c.p;
   Vector db = b.p-c.p;
   c.I = a.I+dI(a.m,da)+b.I+dI(b.m,db);
@@ -568,28 +572,30 @@ void motion(int x, int y) { }
  *
  */
 void build_universe() {
-  for(int i=0; i<10; i++) {
+  Body *b_old=0;
+  for(int i=0; i<4; i++) {
     Body *b = new Body();
     b->loadObj("assets/sphere.obj");
     b->p = Vector(i,i+1,-i);
     b->K = Vector(0.1*i,0.01*i,0);
     b->L = Vector(0.1,0.1*i,0);
-    universe.bodies.push_back(b);
-    universe.forces.push_back(new GravityForce(b,0.01));
-    universe.constraints.push_back(
+    universe.bodies.insert(b);
+    universe.forces.insert(new GravityForce(b,0.01));
+    universe.constraints.insert(
       new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
-    universe.constraints.push_back(
+    universe.constraints.insert(
       new PlaneConstraint(b,0.9,Vector(2.5,0,0),Vector(1,0,0)));
-    universe.constraints.push_back(
+    universe.constraints.insert(
       new PlaneConstraint(b,0.9,Vector(-2.5,0,0),Vector(-1,0,0)));
-    universe.constraints.push_back(
+    universe.constraints.insert(
       new PlaneConstraint(b,0.9,Vector(0,0,1),Vector(0,0,1)));
-    universe.constraints.push_back(
+    universe.constraints.insert(
       new PlaneConstraint(b,0.9,Vector(0,0,-4),Vector(0,0,-1)));
-    // universe.forces.push_back(new FrictionForce(b,0.5));
+    // universe.forces.insert(new FrictionForce(b,0.5));
+    if(i==2)
+      universe.forces.insert(new SpringForce(b_old,0,b,0,0.01,0));
+    b_old = b;
   }
-  universe.forces.push_back(
-      new SpringForce(universe.bodies[1],0,universe.bodies[2],0,0.01,0));
 }
 
 /**
