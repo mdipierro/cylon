@@ -401,13 +401,9 @@ public:
 	(*constraint)->resolve(dt);
     frame++;
   }
-  void callback() {
-    // kick the ball
-    if(frame==2500) {
-      (*bodies.begin())->F=Vector(10,10,0);
-      (*bodies.begin())->tau=Vector(0,0,2);
-    }
-  }
+public:
+  virtual void build_universe()=0;
+  virtual void callback()=0;
 };
 
 /**
@@ -506,7 +502,47 @@ void createWindow(const char* title) {
   glMatrixMode(GL_MODELVIEW);
 }
 
-Universe universe;
+/**
+ * My Universe!
+ */
+class MyUniverse : public Universe {
+public:
+  void build_universe() {
+    Body *b_old=0;
+    for(int i=0; i<4; i++) {
+      Body *b = new Body();
+      b->loadObj("assets/sphere.obj");
+      b->p = Vector(i,i+2,-i);
+      b->K = Vector(0.1*i,0.01*i,0);
+      b->L = Vector(0.5,0.5*i,0);
+      bodies.insert(b);
+      forces.insert(new GravityForce(b,0.01));
+      constraints.insert(
+	new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
+      constraints.insert(
+	new PlaneConstraint(b,0.9,Vector(4,0,0),Vector(1,0,0)));
+      constraints.insert(
+        new PlaneConstraint(b,0.9,Vector(-4,0,0),Vector(-1,0,0)));
+      constraints.insert(
+        new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,0,1)));
+      constraints.insert(
+        new PlaneConstraint(b,0.9,Vector(0,0,-5),Vector(0,0,-1)));
+      // forces.insert(new FrictionForce(b,0.5));
+      if(i==2)
+	forces.insert(new SpringForce(b_old,0,b,0,0.01,0));
+      b_old = b;
+    }
+  }
+  void callback() {
+    // kick the ball
+    if(frame==2500) {
+      (*bodies.begin())->F=Vector(10,10,0);
+      (*bodies.begin())->tau=Vector(0,0,2);
+      }
+  }
+};
+
+MyUniverse universe;
 
 /**
  * Called each frame to update the 3D scene. Delegates to
@@ -581,36 +617,6 @@ void keyboard(unsigned char key, int x, int y) {
 void motion(int x, int y) { }
 
 /**
- *
- */
-void build_universe() {
-  Body *b_old=0;
-  for(int i=0; i<4; i++) {
-    Body *b = new Body();
-    b->loadObj("assets/sphere.obj");
-    b->p = Vector(i,i+2,-i);
-    b->K = Vector(0.1*i,0.01*i,0);
-    b->L = Vector(0.5,0.5*i,0);
-    universe.bodies.insert(b);
-    universe.forces.insert(new GravityForce(b,0.01));
-    universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
-    universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(4,0,0),Vector(1,0,0)));
-    universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(-4,0,0),Vector(-1,0,0)));
-    universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,0,1)));
-    universe.constraints.insert(
-      new PlaneConstraint(b,0.9,Vector(0,0,-5),Vector(0,0,-1)));
-    // universe.forces.insert(new FrictionForce(b,0.5));
-    if(i==2)
-      universe.forces.insert(new SpringForce(b_old,0,b,0,0.01,0));
-    b_old = b;
-  }
-}
-
-/**
  * The main entry point. We pass arguments onto GLUT.
  */
 int main(int argc, char** argv) {
@@ -619,7 +625,7 @@ int main(int argc, char** argv) {
     // Create the application and its window
   createWindow("GPNS");
   // fill universe with stuff
-  build_universe();
+  universe.build_universe();
   // Set up the appropriate handler functions
   glutReshapeFunc(reshape);
   glutKeyboardFunc(keyboard);
