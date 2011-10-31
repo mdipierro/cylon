@@ -141,7 +141,7 @@ where $g = 9.8$meters/second.
 \subsection{Spring}
 
 \begin{equation}
-  \vec F_t^{spring} \equiv \kappa (L - |\vec p_t - \vec q_t|) \frac{\vec p_t-\vec q_q}{|\vec p_t-\vec q_t|}
+  \vec F_t^{spring} \equiv \kappa (|\vec p_t - \vec q_t|-L) \frac{\vec p_t-\vec q_q}{|\vec p_t-\vec q_t|}
 \end{equation}
 where $\vec p_t$ is the position of the mass at time $t$, $q_t$ is the position of the other end of the spring at the same time, $\kappa$ is a constant that describes the rigidity of the spring, and $L$ is the rest length of the pring. Notice that when $|\vec p_t - \vec q_t|=L$ there is no force, when $|\vec p_t - \vec q_t|>L$ the force is attractive and when $|\vec p_t - \vec q_t|<L$ the force is repulsive. 
 
@@ -204,9 +204,9 @@ A rotation of the angle $\theta$ around an arbitrary direction $\hat n = (n_x,n_
 
 \begin{equation}
 R_{\hat n}(\theta) \equiv \left(\begin{tabular}{ccc} 
-$t*n_x*n_x+c$ & $t*n_x*n_y-s*n_z$ & $t*n_x*n_z+s*n_y$ \\
-$t*n_x*n_y+s*n_z$ & $t*n_y*n_y+c$ & $t*n_y*n_z-s*n_x$ \\
-$t*n_x*n_z-s*n_y$ & $t*n_y*n_z+s*n_x$ & $t*n_z*n_z+c$
+$t n_x n_x+c$ & $t n_x n_y-s n_z$ & $t n_x n_z+s n_y$ \\
+$t n_x n_y+s n_z$ & $t n_y n_y+c$ & $t n_y n_z-s n_x$ \\
+$t n_x n_z-s n_y$ & $t n_y n_z+s n_x$ & $t n_z n_z+c$
 \end{tabular}\right)
 \end{equation}
 where $c=\cos(\theta)$ and $s=\sin(\theta)$ and $t=(1-\cos(\theta))$.
@@ -268,11 +268,12 @@ Eq.~\ref{theta_update} will come up handly later when talking about spinning obj
 
 We now consider a rotation propotional to time, $t$. In particular a rotation around a direction $\hat n=(n_x,n_y,n_z)$ of an angle $\theta_t = \omega t$ ($\theta$ depends on $t$). Repeating the previous steps and replacing $\theta_t$ for $\theta$ in eq.~\ref{quaternion} we obtain:
 \begin{equation}
-\tilde \theta_t \equiv (n_x \sin(\omega t/2), n_y \sin(\omega t/2), n_z \sin(\omega t/2),\cos(\omega_t/2))
+\tilde \theta_t \equiv (n_x \sin(\omega t/2), n_y \sin(\omega t/2), n_z \sin(\omega t/2),\cos(\omega t/2))
 \end{equation}
 So if we now consider the position of a vector $\vec p$ subject to rotation we obtain:
 \begin{equation}
 \vec p_t = R(\tilde \theta_t) \vec p
+\label{rottheta}
 \end{equation}
 and we can compute it velocity using the definition:
 \begin{eqnarray}

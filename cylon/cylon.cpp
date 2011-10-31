@@ -59,7 +59,7 @@ Vector operator+(const Vector &v, const Vector &w) {
   return Vector(v(X)+w(X),v(Y)+w(Y),v(Z)+w(Z));
 }
 Vector operator-(const Vector &v, const Vector &w) {
-  return Vector(v(X)+w(X),v(Y)+w(Y),v(Z)+w(Z));
+  return Vector(v(X)-w(X),v(Y)-w(Y),v(Z)-w(Z));
 }
 float operator*(const Vector &v, const Vector &w) {
   return v(X)*w(X) + v(Y)*w(Y) + v(Z)*w(Z);
@@ -148,6 +148,7 @@ Matrix operator/(float c, const Matrix &R) {
 class Body {
 public:
   // object shape
+  float radius;     // all vertices inside radius;
   array<Vector> r;  // vertices in local coordinates
   array<array<int> > faces;
   // properties of the body /////////////////////////
@@ -171,6 +172,7 @@ public:
   // forces and constraints
   // ...
   Body(float m=1.0, bool locked=false) {
+    radius = 0;
     this->locked = locked;
     this->m = 1.0;
     I(X,X)=I(Y,Y)=I(Z,Z)=m;
@@ -216,7 +218,7 @@ void Body::integrator(float dt) {
  */
 class Force {
 public:
-  virtual void apply()=0;
+  virtual void apply(float dt)=0;
 };
 
 /**
@@ -229,7 +231,7 @@ public:
   GravityForce(Body *body, float g = gravity) {
     this->body=body; this->g=g;    
   }
-  void apply() {
+  void apply(float dt) {
     body->F(Y) -= (body->m)*g;
   }
 };
@@ -247,15 +249,18 @@ public:
 	      float kappa, float L) {
     this->bodyA=bodyA; this->iA=iA;
     this->bodyB=bodyB; this->iB=iB;
+    this->kappa=kappa; this->L=L;
   }
-  void apply() {
-    Vector d = bodyA->vertices[iA]-bodyB->vertices[iB];
+  void apply(float dt) {
+    Vector d = bodyB->vertices[iB]-bodyA->vertices[iA];
     float n = sqrt(d*d);
-    Vector F = kappa*(L-n)*d/n;
-    bodyA->F = bodyA->F+F;
-    bodyB->F = bodyA->F-F;
-    bodyA->tau = bodyA->tau + cross(bodyA->Rr[iA],F);
-    bodyB->tau = bodyB->tau - cross(bodyB->Rr[iB],F);
+    if(n>PRECISION) {
+      Vector F = kappa*(n-L)*(d/n);
+      bodyA->F = bodyA->F+F;
+      bodyB->F = bodyB->F-F;
+      bodyA->tau = bodyA->tau + cross(bodyA->Rr[iA],F);
+      bodyB->tau = bodyB->tau - cross(bodyB->Rr[iB],F);
+    }
   }
 };
 
@@ -269,11 +274,12 @@ public:
 		      float kappa, float L) {
     this->body=body; this->i=i;
     this->pin = pin;
+    this->kappa=kappa; this->L=L;
   }
-  void apply() {
+  void apply(float dt) {
     Vector d = body->vertices[i]-pin;
     float n = sqrt(d*d);
-    Vector F = kappa*(L-n)*d/n;
+    Vector F = kappa*(n-L)*d/n;
     body->F = body->F+F;
     body->tau = body->tau + cross(body->Rr[i],F);
   }
@@ -290,9 +296,64 @@ public:
     FrictionForce(Body *body, float gamma) {
       this->body=body; this->gamma=gamma;
     }
-    void apply() {
-      body->F = body->F-gamma*body->v; // ignores shape
+    void apply(float dt) {
+      body->F = body->F-gamma*(body->v)*dt; // ignores shape
     }
+};
+
+/**
+ * Class to deal with constraints (must be able to detect and resolve)
+ */
+class Constraint {
+public:  
+  virtual bool detect()=0;
+  virtual void resolve(float dt)=0;
+  Vector impluse(const Body &A, const Body &B, 
+		 Vector &r_A, Vector &r_B, Vector n, float c) {
+    float IA; // FIX
+    float IB; // FIX
+    Vector r_cA = A.R*r_A;
+    Vector r_cB = B.R*r_B;
+    Vector v_cA = cross(A.omega,r_A)+A.v;
+    Vector v_cB = cross(B.omega,r_B)+B.v;
+    Vector crossA = cross(r_cA,n);
+    Vector crossB = cross(r_cB,n);
+    Vector dF = (-(c-1)/(A.inv_m+B.inv_m+
+			 crossA*crossA/IA+
+			 crossB*crossB/IB)*(v_cB-v_cB)*n)*n;
+  }
+};
+
+/**
+ * Class to deal with collision with static plane
+ * (ignore rotation)
+ */
+class PlaneConstraint: public Constraint {
+public:
+  Body *body;
+  Vector n,d;
+  float penetration, restitution;
+  // d is the discance of the plane from origin
+  // n is a versor orthogonal to plane 
+  // (in opposite direction from collision)
+  PlaneConstraint(Body *body, float restitution,
+		  const Vector &d, const Vector &n) {
+    this->body = body;
+    this->n=n; this->d=d;
+    this->restitution = restitution;
+  }
+  bool detect() {
+    penetration = body->p*n-d*n + body->radius;
+    return penetration>=0;
+  }
+  void resolve(float dt) {
+    // move the object back is stuck on plane 
+    body->p = body->p - penetration*n;
+    float K_ortho = n*body->K;
+    // reverse momentum
+    if(K_ortho>0)
+      body->K = body->K - (restitution+1)*(K_ortho)*n;
+  }
 };
 
 /**
@@ -300,20 +361,22 @@ public:
  */ 
 class Universe {
 public:
-  list<Body*> bodies;
-  list<Force*> forces;
-  list<Body*>::iterator body;
-  list<Force*>::iterator force;
+  array<Body*> bodies;
+  array<Force*> forces;
+  array<Constraint*> constraints;
+  array<Body*>::iterator body;
+  array<Force*>::iterator force;
+  array<Constraint*>::iterator constraint;
   int frame;
   Universe() { frame=0; }
   // evolve universe
-  void evolve(float dt) {
+  void evolve(float dt) {    
     // clear forces and troques
     for(body=bodies.begin(); body!=bodies.end(); body++)
       (*body)->clear();
     // compute forces and torques
     for(force=forces.begin(); force!=forces.end(); force++)
-      (*force)->apply(); // adds to F and tau
+      (*force)->apply(dt); // adds to F and tau
     // test: give it a kick
     if(frame==2000) {
       (*bodies.begin())->F=Vector(5,5,0);
@@ -324,24 +387,10 @@ public:
       if(!(*body)->locked)
 	(*body)->integrator(dt);
     // handle collisions (not quite right yet)
-    for(body=bodies.begin(); body!=bodies.end(); body++)                   
-      if(!(*body)->locked) {
-	if((*body)->p(Y)<0) {
-	  (*body)->p(Y)=0;
-	  (*body)->K(Y)=-0.9*(*body)->K(Y);
-	  (*body)->L = 0.9*(*body)->L;
-	}
-	if((*body)->p(X)<-2.3) {
-	  (*body)->p(X)=-2.3;
-	  (*body)->K(X)=-0.9*(*body)->K(X);
-	  (*body)->L = 0.9*(*body)->L;
-	}
-	if((*body)->p(X)>2.3) {
-	  (*body)->p(X)=2.3;
-	  (*body)->K(X)=-0.9*(*body)->K(X);
-	  (*body)->L = 0.9*(*body)->L;
-	}
-      }
+    for(constraint=constraints.begin();
+	constraint!=constraints.end(); constraint++)
+      if((*constraint)->detect())
+	(*constraint)->resolve(dt);
     frame++;
   }
 };
@@ -441,7 +490,7 @@ void createWindow(const char* title) {
   glMatrixMode(GL_MODELVIEW);
 }
 
-Universe myuniverse;
+Universe universe;
 
 /**
  * Called each frame to update the 3D scene. Delegates to
@@ -450,7 +499,7 @@ Universe myuniverse;
 void update() {
   // evolve world
   float timeStep = 0.016f;	// 60fps fixed rate.
-  myuniverse.evolve(timeStep);
+  universe.evolve(timeStep);
   glutPostRedisplay();
 }
 
@@ -465,20 +514,21 @@ void display() {
   glColor3f(0,0,0);
   
   // draw
-  for(list<Body*>::iterator body=myuniverse.bodies.begin();
-      body!=myuniverse.bodies.end(); body++) {
+  for(universe.body=universe.bodies.begin();
+      universe.body!=universe.bodies.end();
+      universe.body++) {
     glPushMatrix();
-    Vector &pos = (*body)->p;
+    Vector &pos = (*universe.body)->p;
     glTranslatef(pos.v[X], pos.v[Y], pos.v[Z]);
     glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-    for(int i=0; i<(*body)->faces.size(); i++) {      
+    for(int i=0; i<(*universe.body)->faces.size(); i++) {      
       glBegin(GL_POLYGON);
-      for(int j=0; j<(*body)->faces[i].size(); j++) {
-	int k = (*body)->faces[i][j]; 
-	glVertex3fv((*body)->vertices[k].v);
+      for(int j=0; j<(*universe.body)->faces[i].size(); j++) {
+	int k = (*universe.body)->faces[i][j]; 
+	glVertex3fv((*universe.body)->vertices[k].v);
       }
-      int k = (*body)->faces[i][0]; 
-      glVertex3fv((*body)->vertices[k].v);
+      int k = (*universe.body)->faces[i][0]; 
+      glVertex3fv((*universe.body)->vertices[k].v);
       glEnd();
     }
     glPopMatrix();
@@ -515,6 +565,33 @@ void keyboard(unsigned char key, int x, int y) {
 void motion(int x, int y) { }
 
 /**
+ *
+ */
+void build_universe() {
+  for(int i=0; i<3; i++) {
+    Body *b = new Body();
+    b->loadObj("assets/sphere.obj");
+    b->p = Vector(i,i+1,-i);
+    b->L = Vector(0.1,0.1*i,0);
+    universe.bodies.push_back(b);
+    universe.forces.push_back(new GravityForce(b,0.01));
+    universe.constraints.push_back(
+      new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
+    universe.constraints.push_back(
+      new PlaneConstraint(b,0.9,Vector(2.5,0,0),Vector(1,0,0)));
+    universe.constraints.push_back(
+      new PlaneConstraint(b,0.9,Vector(-2.5,0,0),Vector(-1,0,0)));
+    universe.constraints.push_back(
+      new PlaneConstraint(b,0.9,Vector(0,0,2.5),Vector(0,0,1)));
+    universe.constraints.push_back(
+      new PlaneConstraint(b,0.9,Vector(0,0,-2.5),Vector(0,0,-1)));
+    // universe.forces.push_back(new FrictionForce(b,0.5));
+  }
+  universe.forces.push_back(
+      new SpringForce(universe.bodies[1],0,universe.bodies[2],0,0.01,0));
+}
+
+/**
  * The main entry point. We pass arguments onto GLUT.
  */
 int main(int argc, char** argv) {
@@ -523,14 +600,11 @@ int main(int argc, char** argv) {
   
   // Create the application and its window
   createWindow("GPNS");
-  Body b = Body();
-  b.loadObj("assets/sphere.obj");
-  b.p = Vector(0,2,0);
-  b.L = Vector(0.1,0,0);
-  myuniverse.bodies.push_back(&b);
-  myuniverse.forces.push_back(new GravityForce(&b,0.01));
+
+  build_universe();
 
   // Set up the appropriate handler functions
+
   glutReshapeFunc(reshape);
   glutKeyboardFunc(keyboard);
   glutDisplayFunc(display);
