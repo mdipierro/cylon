@@ -566,10 +566,11 @@ void motion(int x, int y) { }
 
 \begin{lstlisting}
 void build_universe() {
-  for(int i=0; i<3; i++) {
+  for(int i=0; i<10; i++) {
     Body *b = new Body();
     b->loadObj("assets/sphere.obj");
     b->p = Vector(i,i+1,-i);
+    b->K = Vector(0.1*i,0.01*i,0);
     b->L = Vector(0.1,0.1*i,0);
     universe.bodies.push_back(b);
     universe.forces.push_back(new GravityForce(b,0.01));
@@ -580,9 +581,9 @@ void build_universe() {
     universe.constraints.push_back(
       new PlaneConstraint(b,0.9,Vector(-2.5,0,0),Vector(-1,0,0)));
     universe.constraints.push_back(
-      new PlaneConstraint(b,0.9,Vector(0,0,2.5),Vector(0,0,1)));
+      new PlaneConstraint(b,0.9,Vector(0,0,1),Vector(0,0,1)));
     universe.constraints.push_back(
-      new PlaneConstraint(b,0.9,Vector(0,0,-2.5),Vector(0,0,-1)));
+      new PlaneConstraint(b,0.9,Vector(0,0,-4),Vector(0,0,-1)));
     // universe.forces.push_back(new FrictionForce(b,0.5));
   }
   universe.forces.push_back(
@@ -595,24 +596,19 @@ The main entry point. We pass arguments onto GLUT.
 int main(int argc, char** argv) {
   // Set up GLUT and the timers
   glutInit(&argc, argv);
-  
-  // Create the application and its window
+    // Create the application and its window
   createWindow("GPNS");
-
+  // fill universe with stuff
   build_universe();
-
   // Set up the appropriate handler functions
-
   glutReshapeFunc(reshape);
   glutKeyboardFunc(keyboard);
   glutDisplayFunc(display);
   glutIdleFunc(update);
   glutMouseFunc(mouse);
-  glutMotionFunc(motion);
-  
+  glutMotionFunc(motion);  
   // Run the application
-  glutMainLoop();
-  
+  glutMainLoop();  
   // Clean up the application
   return 0;
 }
