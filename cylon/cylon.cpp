@@ -19,16 +19,16 @@
 using namespace std;
 
 /**
- * Define macros and constants
+ * Define useful macros and constants
  */
 #define array vector // to avoid name collions
 #define forXYZ(i) for(int i=0; i<3; i++)
-#define OBJ(x) (*(*x))
+#define foreach(i,s) for(i=s.begin();i!=s.end();i++)
+#define OBJ(iterator) (*(*iterator))
 const float PRECISION = 0.00001;
 const int X=0;
 const int Y=1;
 const int Z=2;
-const int W=3; // for quaternions only
 const float gravity = 9.8; // meters/second^2
 
 /**
@@ -82,7 +82,7 @@ Vector cross(const Vector &v, const Vector &w) {
 }
 
 /**
- * Class Rotation
+ * Class Matrix is a base for Rotation and InertiaTensor
  */
 class Matrix {
 public:
@@ -91,34 +91,6 @@ public:
   const float operator()(int i, int j) const { return m[i][j]; }
   float &operator()(int i, int j) { return m[i][j]; }
 };
-
-class Rotation : public Matrix {
-public:
-  Rotation() { forXYZ(i) forXYZ(j) m[i][j]=(i==j)?1:0; }
-  Rotation(const Vector& v) {
-    float theta = norm(v);    
-    if(theta<PRECISION) {
-      forXYZ(i) forXYZ(j) m[i][j] = (i==j)?1:0;
-    } else {
-      float s = sin(theta), c=cos(theta);
-      float t = 1-c;
-      float x = v(X)/theta, y = v(Y)/theta, z = v(Z)/theta;
-      m[X][X]=t*x*x+c;   m[X][Y]=t*x*y-s*z; m[X][Z]=t*x*z+s*y;
-      m[Y][X]=t*x*y+s*z; m[Y][Y]=t*y*y+c;   m[Y][Z]=t*y*z-s*x;
-      m[Z][X]=t*x*z-s*y; m[Z][Y]=t*y*z+s*x; m[Z][Z]=t*z*z+c;
-    }
-  }
-};
-
-/**
- * Class Inertia Tensor
- */
-class InertiaTensor : public Matrix {};
-InertiaTensor operator+(const InertiaTensor &a, const InertiaTensor &b) {
-  InertiaTensor c=a;
-  forXYZ(i) forXYZ(j) c(i,j)+=b(i,j);
-  return c;
-}
 
 /**
  * Operations between matrices
@@ -154,14 +126,46 @@ Matrix operator/(float c, const Matrix &R) {
 }
 
 /**
+ * Class Rotation is a Matrix
+ */
+class Rotation : public Matrix {
+public:
+  Rotation() { forXYZ(i) forXYZ(j) m[i][j]=(i==j)?1:0; }
+  Rotation(const Vector& v) {
+    float theta = norm(v);    
+    if(theta<PRECISION) {
+      forXYZ(i) forXYZ(j) m[i][j] = (i==j)?1:0;
+    } else {
+      float s = sin(theta), c=cos(theta);
+      float t = 1-c;
+      float x = v(X)/theta, y = v(Y)/theta, z = v(Z)/theta;
+      m[X][X]=t*x*x+c;   m[X][Y]=t*x*y-s*z; m[X][Z]=t*x*z+s*y;
+      m[Y][X]=t*x*y+s*z; m[Y][Y]=t*y*y+c;   m[Y][Z]=t*y*z-s*x;
+      m[Z][X]=t*x*z-s*y; m[Z][Y]=t*y*z+s*x; m[Z][Z]=t*z*z+c;
+    }
+  }
+};
+
+/**
+ * Class InertiaTensor is also a Matrix
+ */
+class InertiaTensor : public Matrix {};
+InertiaTensor operator+(const InertiaTensor &a, const InertiaTensor &b) {
+  InertiaTensor c=a;
+  forXYZ(i) forXYZ(j) c(i,j)+=b(i,j);
+  return c;
+}
+
+/**
  * Class Body (describes a rigid body object)
  */
 class Body {
 public:
   // object shape
-  float radius;     // all vertices inside radius;
-  array<Vector> r;  // vertices in local coordinates
+  float radius;      // all vertices inside radius;
+  array<Vector> r;   // vertices in local coordinates
   array<array<int> > faces;
+  Vector color;      // color of the object; 
   // properties of the body /////////////////////////
   bool locked;       // if set true, don't integrate
   float m;           // mass
@@ -194,7 +198,8 @@ public:
   void clear() { F(X)=F(Y)=F(Z)=tau(X)=tau(Y)=tau(Z)=0; }
   void update_vertices();
   void integrator(float dt);
-  void loadObj(const string & file);
+  void loadObj(const string & file, float scale);
+  void draw();
 };
 
 /**
@@ -224,16 +229,17 @@ void Body::integrator(float dt) {
 
 /**
  * Interface for all forces.
- * The constructor can be specific of the force
- * the apply methods adds the contribution to F and tau
+ * The constructor can be specific of the force.
+ * The apply methods adds the contribution to F and tau
  */
 class Force {
 public:
   virtual void apply(float dt)=0;
+  virtual void draw() {};
 };
 
 /**
- * Gravity
+ * Gravity is a Force
  */
 class GravityForce : public Force {
 public:  
@@ -248,7 +254,7 @@ public:
 };
 
 /**
- * Spring Forces
+ * Spring is a Force
  */
 class SpringForce : public Force {
 public:
@@ -273,8 +279,12 @@ public:
       bodyB->tau = bodyB->tau - cross(bodyB->Rr[iB],F);
     }
   }
+  void draw();
 };
 
+/**
+ * A Spring can be anchored to a pin.
+ */
 class AnchoredSpringForce : public Force {
 public:
   Body *body;
@@ -298,7 +308,8 @@ public:
 
 
 /**
- * Friction (ignores the shape of the body, assumes a sphere)
+ * Friction is alos a Force
+ * (this ignores the shape of the body, assumes a sphere)
  */
 class FrictionForce: public Force {
 public:
@@ -312,13 +323,28 @@ public:
     }
 };
 
+
+class Water: public Force {
+public:
+  float level, wave, speed;
+  float m[41][41];  
+  float t;
+  Water(float level, float wave=0.1, float speed=0.1) {
+    this->level = level; this->wave=wave, this->speed=speed;
+    t=0;
+  }
+  void apply(float dt);
+  void draw();
+};
+
 /**
- * Class to deal with constraints (must be able to detect and resolve)
+ * A Constraint has detect and resolve methods.
  */
 class Constraint {
 public:  
   virtual bool detect()=0;
   virtual void resolve(float dt)=0;
+  virtual void draw() {}
   Vector impluse(const Body &A, const Body &B, 
 		 Vector &r_A, Vector &r_B, Vector n, float c) {
     float IA; // FIX
@@ -363,7 +389,6 @@ public:
     float K_ortho = n*body->K;
     // optional, deal with friction 
     Vector L_ortho = -(body->radius)*cross(n,body->K-K_ortho);
-    Vector L_hat = versor(L_ortho);
     body->L = (n*body->L)*n + L_ortho;
     // reverse momentum
     if(K_ortho>0)
@@ -372,7 +397,8 @@ public:
 };
 
 /**
- * class that stores all bodies, forces and constraints
+ * A Universe stores bodies, forces, constraints
+ * and evolves in time.
  */ 
 class Universe {
 public:
@@ -388,30 +414,23 @@ public:
     frame=0;
   }
   ~Universe() { 
-    for(body=bodies.begin(); body!=bodies.end(); body++)
-      delete (*body);
-    for(force=forces.begin(); force!=forces.end(); force++)
-      delete (*force);
-    for(constraint=constraints.begin();
-        constraint!=constraints.end(); constraint++)
-      delete (*constraint);
+    foreach(body,bodies) delete (*body);
+    foreach(force,forces) delete (*force);
+    foreach(constraint,constraints) delete (*constraint);
   }
   // evolve universe
   void evolve() {    
     // clear forces and troques
-    for(body=bodies.begin(); body!=bodies.end(); body++)
-      OBJ(body).clear();
+    foreach(body,bodies) OBJ(body).clear();
     // compute forces and torques
-    for(force=forces.begin(); force!=forces.end(); force++)
-      OBJ(force).apply(dt); // adds to F and tau
+    foreach(force,forces) OBJ(force).apply(dt);
     callback();
     // integrate
-    for(body=bodies.begin(); body!=bodies.end(); body++) 
+    foreach(body,bodies)
       if(!OBJ(body).locked)
 	OBJ(body).integrator(dt);
     // handle collisions (not quite right yet)
-    for(constraint=constraints.begin();
-	constraint!=constraints.end(); constraint++)
+    foreach(constraint,constraints)
       if(OBJ(constraint).detect())
 	OBJ(constraint).resolve(dt);
     frame++;
@@ -424,7 +443,7 @@ public:
 /**
  * Auxiliary functions translate moments of Inertia
  */
- InertiaTensor dI(float m, const Vector &r) {
+InertiaTensor dI(float m, const Vector &r) {
   InertiaTensor I;
   float r2 = r*r;
   forXYZ(j) forXYZ(k) I(j,k) = m*((j==k)?r2:0-r(j)*r(k));
@@ -462,59 +481,35 @@ Body operator+(const Body &a, const Body &b) {
   return c;
 }
 
-void Body::loadObj(const string & file) {
+void Body::loadObj(const string & file,float scale=0.5) {
   ifstream input;
-  input.open(file.c_str());
   string line;
+  float x,y,z;
+  string initialVal;
+  istringstream instream;
+  input.open(file.c_str());
   if(input.is_open()) {
     while(input.good()) {
-      std::getline(input, line);
+      getline(input, line);
       if(line.length()>0) {
-	string initialVal;
-	istringstream instream;
 	instream.str(line);
 	instream >> initialVal;
 	if(initialVal=="v") {
-	  float x,y,z;
 	  instream >> x >> y >> z;
-	  r.push_back(Vector(x,y,z));
-	  radius = max(radius,norm(Vector(x,y,z)));
+	  r.push_back(scale*Vector(x,y,z));
+	  radius = max(radius,scale*norm(Vector(x,y,z)));
 	} else if (initialVal=="f") {
-	  int v1, v2, v3;
-	  instream >> v1 >> v2 >> v3;
+	  instream >> x >> y >> z;;
 	  array<int> triangle;
-	  triangle.push_back(v1-1);
-	  triangle.push_back(v2-1);
-	  triangle.push_back(v3-1);
+	  triangle.push_back(x-1);
+	  triangle.push_back(y-1);
+	  triangle.push_back(z-1);
 	  faces.push_back(triangle);
 	}
       }
     }
     update_vertices();
   }
-}
-
-
-/**
- * GLUT code below
- * Creates a window in which to display the scene.
- */
-void createWindow(const char* title) {
-  int width = 640;
-  int height = 480;
-  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-  glutInitWindowSize(width,height);
-  glutInitWindowPosition(0,0);
-  glutCreateWindow(title);
-  
-  glClearColor(0.9f, 0.95f, 1.0f, 1.0f);
-  glEnable(GL_DEPTH_TEST);
-  glShadeModel(GL_SMOOTH);
-  
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluPerspective(60.0, (double)width/(double)height, 1.0, 500.0);
-  glMatrixMode(GL_MODELVIEW);
 }
 
 /**
@@ -526,6 +521,10 @@ public:
     Body *b_old=0;
     for(int i=0; i<4; i++) {
       Body *b = new Body();
+      if(i==0) b->color=Vector(1,0,0);
+      else if(i==1) b->color=Vector(0,1,0);
+      else if(i==2) b->color=Vector(0,1,0);
+      else if(i==3) b->color=Vector(0,0,1);
       b->loadObj("assets/sphere.obj");
       b->p = Vector(i,i+2,-i);
       b->K = Vector(0.1*i,0.01*i,0);
@@ -535,11 +534,11 @@ public:
       constraints.insert(
         new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
       constraints.insert(
-        new PlaneConstraint(b,0.9,Vector(4,0,0),Vector(1,0,0)));
+        new PlaneConstraint(b,0.9,Vector(5,0,0),Vector(1,0,0)));
       constraints.insert(
-        new PlaneConstraint(b,0.9,Vector(-4,0,0),Vector(-1,0,0)));
+        new PlaneConstraint(b,0.9,Vector(-5,0,0),Vector(-1,0,0)));
       constraints.insert(
-        new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,0,1)));
+        new PlaneConstraint(b,0.9,Vector(0,0,5),Vector(0,0,1)));
       constraints.insert(
         new PlaneConstraint(b,0.9,Vector(0,0,-5),Vector(0,0,-1)));
       // forces.insert(new FrictionForce(b,0.5));
@@ -547,11 +546,50 @@ public:
 	forces.insert(new SpringForce(b_old,0,b,0,0.01,0));
       b_old = b;
     }
+    // forces.insert(new Water(3.0));
   }
   void callback() {}
 };
 
 MyUniverse universe;
+
+/**
+ * mimic the effect of water and waves
+ */
+void Water::apply(float dt) {
+  t=t+dt;
+  for(int i=0; i<41; i++)
+    for(int j=0; j<41; j++)
+      this->m[i][j] = level+wave*sin(i+speed*t);
+  foreach(universe.body,universe.bodies) {
+    Body &body = OBJ(universe.body);
+    int i=(body.p(X)+5.0)/0.25;
+    int j=(body.p(Z)+5.0)/0.25;
+    if(body.p(Y)<m[i][j]) {
+      body.F+=(Vector(0,1,0)-2.0*(body.v))*dt;    
+      body.L=(1.0-dt)*body.L;
+    }
+  }
+}
+  
+/**
+ * GLUT code below
+ * Creates a window in which to display the scene.
+ */
+void createWindow(const char* title) {
+  int width = 640, height = 480;
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutInitWindowSize(width,height);
+  glutInitWindowPosition(0,0);
+  glutCreateWindow(title);
+  glClearColor(0.9f, 0.95f, 1.0f, 1.0f);
+  glEnable(GL_DEPTH_TEST);
+  glShadeModel(GL_SMOOTH);  
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  gluPerspective(60.0, (double)width/(double)height, 1.0, 500.0);
+  glMatrixMode(GL_MODELVIEW);
+}
 
 /**
  * Called each frame to update the 3D scene. Delegates to
@@ -565,62 +603,91 @@ void update() {
 }
 
 /**
- * Called each frame to display the 3D scene. Delegates to
- * the application.
+ * Function called each frame to display the 3D scene. 
+ * It draws all bodies, forces and constraints.
  */
 void display() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
   gluLookAt(0.0, 3.5, 8.0,  0.0, 3.5, 0.0,  0.0, 1.0, 0.0);
-  glColor3f(0,0,0);
-  
-  // draw
-  for(universe.body=universe.bodies.begin();
-      universe.body!=universe.bodies.end();
-      universe.body++) {
-    glPushMatrix();
-    Vector &pos = (*universe.body)->p;
-    glTranslatef(pos.v[X], pos.v[Y], pos.v[Z]);
-    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-    for(int i=0; i<(*universe.body)->faces.size(); i++) {      
-      glBegin(GL_POLYGON);
-      for(int j=0; j<(*universe.body)->faces[i].size(); j++) {
-	int k = (*universe.body)->faces[i][j]; 
-	glVertex3fv((*universe.body)->vertices[k].v);
-      }
-      int k = (*universe.body)->faces[i][0]; 
-      glVertex3fv((*universe.body)->vertices[k].v);
-      glEnd();
-    }
-    glPopMatrix();
-  }
+  foreach(universe.body,universe.bodies)
+    OBJ(universe.body).draw();
+  foreach(universe.force,universe.forces)
+    OBJ(universe.force).draw();
+  foreach(universe.constraint,universe.constraints)
+    OBJ(universe.constraint).draw();
   // update the displayed content
   glFlush();
   glutSwapBuffers();
 }
 
 /**
- * Called when the display window changes size.
+ * Code that draws an Body
+ */
+void Body::draw() {
+  glColor3f(color(0),color(1),color(2));    
+  for(int i=0; i<faces.size(); i++) {      
+    glBegin(GL_POLYGON);
+    for(int j=0; j<faces[i].size(); j++)
+      glVertex3fv(vertices[faces[i][j]].v);
+    glVertex3fv(vertices[faces[i][0]].v);
+    glEnd();
+  }
+}
+
+/**
+ * Code that draws a Spring
+ */
+void SpringForce::draw() {
+  glColor3f(0,0,0);
+  glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+  glBegin(GL_LINES);
+  glVertex3fv(bodyA->vertices[iA].v);
+  glVertex3fv(bodyB->vertices[iB].v);
+  glEnd();
+}
+
+/**
+ * Draw the water
+ */
+void Water::draw() {
+  glColor3f(0,0,1);
+  for(int i=0; i<40; i++) {
+    glBegin(GL_LINE_STRIP);
+    for(int j=0; j<41; j++)
+      glVertex3fv(Vector(-5.0+0.25*i,m[i][j],-5.0+0.25*j).v);
+    glEnd();
+    glBegin(GL_LINE_STRIP);
+    for(int j=0; j<41; j++)
+      glVertex3fv(Vector(-5.0+0.25*j,m[j][i],-5.0+0.25*i).v);
+    glEnd();    
+  }      
+}
+
+/**
+ * Function called when the display window changes size.
  */
 void reshape(int width, int height) {
   glViewport(0, 0, width, height);
 }
 
 /**
- * Called when a mouse button is pressed. Delegates to the
- * application.
+ * Function called when a mouse button is pressed.
  */
 void mouse(int button, int state, int x, int y) { }
 
 /**
- * Called when a key is pressed.
+ * Function called when a key is pressed.
  */
 void keyboard(unsigned char key, int x, int y) {
-  // Note we omit passing on the x and y: they are rarely needed.
-  // kick the ball
-  if(key==32) {
-    OBJ(universe.bodies.begin()).K+=Vector(10,10,0)*universe.dt;
-    OBJ(universe.bodies.begin()).L+=Vector(0,0,2)*universe.dt;
+  // if i=key-chr('0') kicks ball i
+  int i=0;
+  foreach(universe.body,universe.bodies) {
+    if(key-48==i) {    
+      OBJ(universe.body).K+=Vector(0.2,0.2,0);
+      OBJ(universe.body).L+=Vector(0,0,0.04);
+    }
+    i++;
   }
 }
 
@@ -630,13 +697,12 @@ void keyboard(unsigned char key, int x, int y) {
 void motion(int x, int y) { }
 
 /**
- * The main entry point. We pass arguments onto GLUT.
+ * The main function. Everythign starts here.
  */
 int main(int argc, char** argv) {
-  // Set up GLUT and the timers
+  // Create the application and its window
   glutInit(&argc, argv);
-    // Create the application and its window
-  createWindow("GPNS");
+  createWindow("Cylon");
   // fill universe with stuff
   universe.build_universe();
   // Set up the appropriate handler functions
@@ -646,8 +712,7 @@ int main(int argc, char** argv) {
   glutIdleFunc(update);
   glutMouseFunc(mouse);
   glutMotionFunc(motion);  
-  // Run the application
+  // Enter into a loop
   glutMainLoop();  
-  // Clean up the application
   return 0;
 }
