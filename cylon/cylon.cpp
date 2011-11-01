@@ -397,6 +397,20 @@ public:
 };
 
 /**
+ * Default all-2-all collision handler
+ */
+class All2AllCollisions : public Constraint {
+public:  
+  float restitution;
+  All2AllCollisions(float c=0.5) {
+    restitution = c;
+  }
+  bool detect() { return true; }
+  void resolve(float dt);
+};
+
+
+/**
  * A Universe stores bodies, forces, constraints
  * and evolves in time.
  */ 
@@ -529,22 +543,18 @@ public:
       b->L = Vector(0.5,0.5*i,0.1*i);
       bodies.insert(b);
       forces.insert(new GravityForce(b,0.01));
-      constraints.insert(
-        new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
-      constraints.insert(
-        new PlaneConstraint(b,0.9,Vector(5,0,0),Vector(1,0,0)));
-      constraints.insert(
-        new PlaneConstraint(b,0.9,Vector(-5,0,0),Vector(-1,0,0)));
-      constraints.insert(
-        new PlaneConstraint(b,0.9,Vector(0,0,5),Vector(0,0,1)));
-      constraints.insert(
-        new PlaneConstraint(b,0.9,Vector(0,0,-5),Vector(0,0,-1)));
+      constraints.insert(new PlaneConstraint(b,0.9,Vector(0,0,0),Vector(0,-1,0)));
+      constraints.insert(new PlaneConstraint(b,0.9,Vector(5,0,0),Vector(1,0,0)));
+      constraints.insert(new PlaneConstraint(b,0.9,Vector(-5,0,0),Vector(-1,0,0)));
+      constraints.insert(new PlaneConstraint(b,0.9,Vector(0,0,5),Vector(0,0,1)));
+      constraints.insert(new PlaneConstraint(b,0.9,Vector(0,0,-5),Vector(0,0,-1)));
       // forces.insert(new FrictionForce(b,0.5));
       if(i==2)
 	forces.insert(new SpringForce(b_old,0,b,0,0.01,0));
       b_old = b;
     }
-    // forces.insert(new Water(3.0));
+    constraints.insert(new All2AllCollisions());
+    // forces.insert(new Water(3.0)); // TEST immerge in water
   }
   void callback() {}
 };
@@ -567,6 +577,30 @@ void Water::apply(float dt) {
       body.F+=(Vector(0,1,0)-2.0*(body.v))*dt;    
       body.L=(1.0-dt)*body.L;
     }
+  }
+}
+
+/**
+ * for every to bodies A,B check and resolve collisions
+ */
+void All2AllCollisions::resolve(float dt) {
+  set<Body*>::iterator bodyA, bodyB;
+  foreach(bodyA,universe.bodies) {
+    foreach(bodyB,universe.bodies) {
+      Body &A = OBJ(bodyA);
+      Body &B = OBJ(bodyB);
+      Vector d = B.p-A.p;
+      Vector v_closing = B.v-A.v;
+      float penetration = A.radius+B.radius-norm(d);	  
+      if(penetration>0 && v_closing*d<0) {
+	Vector q = (penetration/(A.m+B.m))*versor(d);
+	A.p = A.p-B.m*q;
+	B.p = B.p+A.m*q;
+	Vector v_separating = -restitution*v_closing;
+	A.K = A.K-A.m*B.m/(A.m+B.m)*v_separating;
+	B.K = B.K+A.m*B.m/(A.m+B.m)*v_separating;	
+      }
+    } 
   }
 }
   
@@ -607,7 +641,7 @@ void update() {
 void display() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
-  gluLookAt(0.0, 3.5, 8.0,  0.0, 3.5, 0.0,  0.0, 1.0, 0.0);
+  gluLookAt(0.0,3.5,10.0, 0.0,3.5,0.0, 0.0,1.0,0.0);
   foreach(universe.body,universe.bodies)
     OBJ(universe.body).draw();
   foreach(universe.force,universe.forces)
