@@ -484,26 +484,24 @@ void Body::loadObj(const string & file,float scale=0.5) {
   ifstream input;
   string line;
   float x,y,z;
-  string initialVal;
-  istringstream instream;
   input.open(file.c_str());
   if(input.is_open()) {
     while(input.good()) {
       getline(input, line);
       if(line.length()>0) {
+	string initialVal;
+	istringstream instream;
 	instream.str(line);
 	instream >> initialVal;
 	if(initialVal=="v") {
 	  instream >> x >> y >> z;
-	  r.push_back(scale*Vector(x,y,z));
-	  radius = max(radius,scale*norm(Vector(x,y,z)));
+	  Vector p = scale*Vector(x,y,z);
+	  r.push_back(p);
+	  radius = max(radius,norm(p));
 	} else if (initialVal=="f") {
-	  instream >> x >> y >> z;;
-	  array<int> triangle;
-	  triangle.push_back(x-1);
-	  triangle.push_back(y-1);
-	  triangle.push_back(z-1);
-	  faces.push_back(triangle);
+	  array<int> path;
+	  while(instream >> x) path.push_back(x-1);
+	  faces.push_back(path);
 	}
       }
     }
@@ -527,7 +525,7 @@ public:
       b->loadObj("assets/sphere.obj");
       b->p = Vector(i,i+2,-i);
       b->K = Vector(0.1*i,0.01*i,0);
-      b->L = Vector(0.5,0.5*i,0);
+      b->L = Vector(0.5,0.5*i,0.1*i);
       bodies.insert(b);
       forces.insert(new GravityForce(b,0.01));
       constraints.insert(
@@ -627,7 +625,7 @@ void Body::draw() {
   glColor3f(color(0),color(1),color(2));    
   glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
   for(int i=0; i<faces.size(); i++) {      
-    glBegin(GL_POLYGON);
+    glBegin(GL_POLYGON);        
     for(int j=0; j<faces[i].size(); j++)
       glVertex3fv(vertices[faces[i][j]].v);
     glVertex3fv(vertices[faces[i][0]].v);
