@@ -1,4 +1,8 @@
-/**
+/** */
+// Program name: cylon.cpp         
+// Author:       Massimo Di Pierro 
+// License:      BSD               
+/**                                 
  * Import the necessary libraries
  */
 #include "fstream"
