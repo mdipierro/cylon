@@ -328,10 +328,10 @@ class Water: public Force {
 public:
   float level, wave, speed;
   float m[41][41];  
-  float t;
+  float t, x0,dx;
   Water(float level, float wave=0.1, float speed=0.1) {
     this->level = level; this->wave=wave, this->speed=speed;
-    t=0;
+    t=0; x0=5.0; dx=0.25;
   }
   void apply(float dt);
   void draw();
@@ -563,8 +563,8 @@ void Water::apply(float dt) {
       this->m[i][j] = level+wave*sin(i+speed*t);
   foreach(universe.body,universe.bodies) {
     Body &body = OBJ(universe.body);
-    int i=(body.p(X)+5.0)/0.25;
-    int j=(body.p(Z)+5.0)/0.25;
+    int i=(body.p(X)+x0)/dx;
+    int j=(body.p(Z)+x0)/dx;
     if(body.p(Y)<m[i][j]) {
       body.F+=(Vector(0,1,0)-2.0*(body.v))*dt;    
       body.L=(1.0-dt)*body.L;
@@ -626,6 +626,7 @@ void display() {
  */
 void Body::draw() {
   glColor3f(color(0),color(1),color(2));    
+  glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
   for(int i=0; i<faces.size(); i++) {      
     glBegin(GL_POLYGON);
     for(int j=0; j<faces[i].size(); j++)
@@ -652,15 +653,16 @@ void SpringForce::draw() {
  */
 void Water::draw() {
   glColor3f(0,0,1);
+  glPolygonMode(GL_FRONT,GL_FILL);
   for(int i=0; i<40; i++) {
-    glBegin(GL_LINE_STRIP);
-    for(int j=0; j<41; j++)
-      glVertex3fv(Vector(-5.0+0.25*i,m[i][j],-5.0+0.25*j).v);
+    glBegin(GL_POLYGON);
+    for(int j=0; j<40; j++) {
+      glVertex3fv(Vector(-x0+dx*i,m[i][j],-x0+dx*j).v);
+      glVertex3fv(Vector(-x0+dx*i,m[i][j+1],-x0+dx*j+dx).v);
+      glVertex3fv(Vector(-x0+dx*i+dx,m[i+1][j+1],-x0+dx*j+dx).v);
+      glVertex3fv(Vector(-x0+dx*i+dx,m[i+1][j],-x0+dx*j).v);
+    }
     glEnd();
-    glBegin(GL_LINE_STRIP);
-    for(int j=0; j<41; j++)
-      glVertex3fv(Vector(-5.0+0.25*j,m[j][i],-5.0+0.25*i).v);
-    glEnd();    
   }      
 }
 
