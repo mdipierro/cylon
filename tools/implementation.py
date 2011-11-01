@@ -11,7 +11,7 @@ for item in data.split('/**'):
     desc, code = item.split('*/',1)
     desc = ('\n'.join(clean(line) for line in desc.split('\n'))).strip()
     if desc[-1:]=='.': desc=desc[:-1]+':'
-    elif not desc[-1:]==':': desc=desc+':'
+    elif desc and not desc[-1:]==':': desc=desc+':'
     desc = desc.capitalize()
     print '\\noindent\n'+desc,
     print '\\begin{lstlisting}'
