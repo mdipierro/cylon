@@ -215,78 +215,50 @@ where $c=\cos(\theta)$ and $s=\sin(\theta)$ and $t=(1-\cos(\theta))$.
 \includegraphics[width=5cm]{images/rotation.png}
 \end{center}
 
-For later convenience we will define a four dimension vector (marked by a tilde):
-\begin{equation}
-\tilde \theta = (\theta_0,\theta_1,\theta_2,\theta_3) = (n_x \sin(\theta/2), n_y \sin(\theta/2), n_z \sin(\theta/2),\cos(\theta/2))
-\label{quaternion}
-\end{equation}
-and with a change of variable the matrix of rotation $R_{\hat n}(\theta)$ can be re-written:
-
-\begin{equation}
-R(\tilde \theta) \equiv \left(\begin{tabular}{ccc}
-$2(\theta_0 \theta_0 + \theta_1 \theta_1)-1$ & $2(\theta_0 \theta_1 - \theta_2 \theta_3)$ & $2(\theta_0 \theta_2 - \theta_1 \theta_3) $\\
-$2(\theta_0 \theta_1 + \theta_2 \theta_3)$ & $2(\theta_1 \theta_1 +\theta_3 \theta_3)-1$ & $2(\theta_1 \theta_2-\theta_0 \theta_3) $\\
-$2(\theta_0 \theta_3 - \theta_1 \theta_3)$ & $2(\theta_0 \theta_3 + \theta_1 \theta_2)$ & $2(\theta_2 \theta_2 + \theta_3 \theta_3)-1$
-\end{tabular}\right)
-\label{rotation}
-\end{equation}
-
-The 4-vector $\tilde \theta$ defines an {\it orientation} and it is called a {\it quaternion} although its methematical properties are not relevant here and are not discussed. The associated matrix $R(\tilde \theta)$ can be used to rotates the points of an object into an orientation.
-
 \section{Composition of rotations}
 
-If a body is oriented according to $R(\tilde \theta)$ and it gets rotated by another matrix $R_{\hat n}(\beta)$ the body will end up being oriented in a different direction:
+If a body is oriented according to $R_{\hat n}(\theta)$ and it gets rotated by another matrix $R_{\hat m}(\beta)$ the body will end up being oriented in a different direction:
 \begin{equation}
-R(\tilde \theta') = R_{\hat n}(\beta) R(\tilde \theta)
+R_{\hat n'}(\theta') = R_{\hat m}(\beta) R_{\hat n}(\theta)
 \end{equation}
-
-What's  $\tilde \theta'$ as function of $\hat n$, $\beta$ and $\tilde \theta$?
-An explicit calculation (omitted) reveals:
+which we can rewrite with with a change of notation as
 \begin{equation}
-\tilde \theta' = \tilde \theta + \frac{1}{2}\vec \beta \tilde \theta
-\label{theta_update}
+R' = R(\vec \beta) R
 \end{equation}
-where $\vec \beta \tilde \theta$ is defined as 
+where $R = R_{\hat n}(\theta)$, $R'=R_{\hat n'}(\theta')$, $R(\vec \beta)\equiv R_{\hat m}(\beta)$ and
 \begin{equation}
-\vec \beta \tilde \theta = \left(\begin{tabular}{c}
-$- (\beta_0 \theta_0 + \beta_1 \theta_1 + \beta_2 \theta_2)$ \\
-$(\beta_0 \theta_3 + \beta_1 \theta_2 - \beta_2 \theta_1)$ \\ 
-$(\beta_1 \theta_3 + \beta_2 \theta_0 - \beta_0 \theta_2)$ \\ 
-$(\beta_2 \theta_3 + \beta_0 \theta_1 - \beta_1 \theta_0)$ 
-\label{vxq}
-\end{tabular}\right)
+\vec \beta = (\beta m_x, \beta m_y, \beta m_z)
 \end{equation}
-
-where $(\beta_0,\beta_1,\beta_2)=(\beta n_x,\beta n_y,\beta n_z)$
-
-Eq.~\ref{theta_update} will come up handly later when talking about spinning objects. In this case for an infinitesimal rotation $\beta=\omega dt$:
+For an infinitesimal rotation $\beta = \omega dt$ we can write
 \begin{equation}
-\tilde \theta' = \tilde \theta + \frac{1}{2}\vec \omega \tilde \theta dt
+R' = R(\vec \omega dt) R
 \end{equation}
+where
+\begin{equation}
+\vec \omega \equiv (\omega n_x, \omega n_y, \omega n_z)
+\label{avelocity}
+\end{equation}
+is called angular velocity.
 
 \section{Spinning}
 
 We now consider a rotation propotional to time, $t$. In particular a rotation around a direction $\hat n=(n_x,n_y,n_z)$ of an angle $\theta_t = \omega t$ ($\theta$ depends on $t$). Repeating the previous steps and replacing $\theta_t$ for $\theta$ in eq.~\ref{quaternion} we obtain:
 \begin{equation}
-\tilde \theta_t \equiv (n_x \sin(\omega t/2), n_y \sin(\omega t/2), n_z \sin(\omega t/2),\cos(\omega t/2))
+\vec \theta_t \equiv (\omega t n_x, \omega t n_y, \omega t n_z)
 \end{equation}
 So if we now consider the position of a vector $\vec p$ subject to rotation we obtain:
 \begin{equation}
-\vec p_t = R(\tilde \theta_t) \vec p
+\vec p_t = R(\vec \theta_t) \vec p
 \label{rottheta}
 \end{equation}
 and we can compute it velocity using the definition:
 \begin{eqnarray}
 \vec v_t &=& (\vec p_{t+dt} - \vec p_t)/dt \\
-         &=& (R(\tilde \theta_{t+dt}t) \vec p - R(\tilde \theta_t) \vec p)/dt \\
+         &=& (R(\vec \theta_{t+dt}t) \vec p - R(\vec \theta_t) \vec p)/dt \\
          &=& \vec \omega \times \vec p
 \label{vomega}
 \end{eqnarray}
-where
-\begin{equation}
-\vec \omega \equiv (\omega n_x, \omega n_y, \omega n_z)
-\end{equation}
-is called angular velocity.
+where $\vec \omega$ is the angular velocity, same as eq.~\ref{avelocity}.
 
 \section{Newton Second Law for Rotation}
 
@@ -380,6 +352,55 @@ and the velocity of the point is
 
 %($R(...)$ is described in eq.~\ref{rotation}).
 
+\section{Quaternions (optional)}
+
+It can be convenient to define a four dimension vector (marked by a tilde):
+\begin{equation}
+\tilde \theta = (\theta_0,\theta_1,\theta_2,\theta_3) = (n_x \sin(\theta/2), n_y \sin(\theta/2), n_z \sin(\theta/2),\cos(\theta/2))
+\label{quaternion}
+\end{equation}
+and with a change of variable the matrix of rotation $R_{\hat n}(\theta)$ can be re-written:
+
+\begin{equation}
+R(\tilde \theta) \equiv \left(\begin{tabular}{ccc}
+$2(\theta_0 \theta_0 + \theta_1 \theta_1)-1$ & $2(\theta_0 \theta_1 - \theta_2 \theta_3)$ & $2(\theta_0 \theta_2 - \theta_1 \theta_3) $\\
+$2(\theta_0 \theta_1 + \theta_2 \theta_3)$ & $2(\theta_1 \theta_1 +\theta_3 \theta_3)-1$ & $2(\theta_1 \theta_2-\theta_0 \theta_3) $\\
+$2(\theta_0 \theta_3 - \theta_1 \theta_3)$ & $2(\theta_0 \theta_3 + \theta_1 \theta_2)$ & $2(\theta_2 \theta_2 + \theta_3 \theta_3)-1$
+\end{tabular}\right)
+\label{rotation}
+\end{equation}
+
+The 4-vector $\tilde \theta$ defines an {\it orientation} and it is called a {\it quaternion} although its methematical properties are not relevant here and are not discussed. The associated matrix $R(\tilde \theta)$ can be used to rotates the points of an object into an orientation.
+
+If a body is oriented according to $R(\tilde \theta)$ and it gets rotated by another matrix $R_{\hat n}(\beta)$ the body will end up being oriented in a different direction:
+\begin{equation}
+R(\tilde \theta') = R_{\hat n}(\beta) R(\tilde \theta)
+\end{equation}
+
+What's  $\tilde \theta'$ as function of $\hat n$, $\beta$ and $\tilde \theta$?
+An explicit calculation (omitted) reveals:
+\begin{equation}
+\tilde \theta' = \tilde \theta + \frac{1}{2}\vec \beta \tilde \theta
+\label{theta_update}
+\end{equation}
+where $\vec \beta \tilde \theta$ is defined as 
+\begin{equation}
+\vec \beta \tilde \theta = \left(\begin{tabular}{c}
+$- (\beta_0 \theta_0 + \beta_1 \theta_1 + \beta_2 \theta_2)$ \\
+$(\beta_0 \theta_3 + \beta_1 \theta_2 - \beta_2 \theta_1)$ \\ 
+$(\beta_1 \theta_3 + \beta_2 \theta_0 - \beta_0 \theta_2)$ \\ 
+$(\beta_2 \theta_3 + \beta_0 \theta_1 - \beta_1 \theta_0)$ 
+\label{vxq}
+\end{tabular}\right)
+\end{equation}
+
+where $(\beta_0,\beta_1,\beta_2)=(\beta n_x,\beta n_y,\beta n_z)$
+
+Eq.~\ref{theta_update} will come up handly later when talking about spinning objects. In this case for an infinitesimal rotation $\beta=\omega dt$:
+\begin{equation}
+\tilde \theta' = \tilde \theta + \frac{1}{2}\vec \omega \tilde \theta dt
+\end{equation}
+
 \section{Assembling Rigid Bodies}
 
 Consider a composite rigid body whose parts are smaller rigid bodies characterized by
@@ -423,42 +444,44 @@ where $c$ is a restitution coefficient and
 \end{equation}
 Conservation of momentum and the above relation between closing and separating velocity yields:
 \begin{eqnarray}
-\vec v'_A &=& \vec v_A + d{\vec F}/{m_A} \\
-\vec v'_B &=& \vec v_B - d{\vec F}/{m_B} 
+\vec K'_A &=& \vec K_A + \vec J/{m_A} \\
+\vec K'_B &=& \vec K_B - \vec J/{m_B} 
 \end{eqnarray}
 where
 \begin{equation}
-d{\vec F} = \frac{(c+1)(\vec v_B-\vec v_A)}{1/m_A+1/m_B}
+\vec J = \frac{(c+1)(\vec v_B-\vec v_A)}{1/m_A+1/m_B}
 \end{equation}
 
 In the case of collision of the object A with a plane B or other object of infinite mass
 \begin{equation}
-\vec v'_A = \lim_{m_B-\rightarrow \infty} \vec v_A + \frac{\vec{dF}}{m_A} = \vec v_A + (c+1)(\vec v_B-\vec v_A)
+\vec K'_A = \lim_{m_A-\rightarrow \infty} \vec K_A + \frac{\vec J}{m_A} = \vec K_A + m_A (c+1)(\vec v_B-\vec v_A)
 \end{equation}
-
-Also notice that if the two bodies get stuck to each other during the collision, then $c=0$ and
-\begin{eqnarray}
-\vec v'_A &=& \vec v_A + \frac{m_B}{m_A+m_B}(\vec v_B-\vec v_A) \\
-\vec v'_B &=& \vec v_B + \frac{m_A}{m_A+m_B}(\vec v_A-\vec v_B) = \vec v'_A
-\end{eqnarray}
-the two bodies will be moving at the same velocity (the center of mass velocity).
 
 In the case of rigid bodies eq.~\ref{collision} applies to the points of contact between two rigid bodies. To properly consider its effect on the entire body we have to rewrite the velocity in terms of the velocities of the center of mass plus a component due to the angular velocity.
 
 \begin{equation}
-d{\vec F} = \frac {-(c+1) (\vec v_{cB} - \vec v_{cA}) \cdot \hat n}{1/m_A+1/m_B + |\vec r_{cA} \times \hat n|^2 / I_A + |\vec r_{cB} \times \hat n|^2 / I_B}\hat n
+{\vec J}_{\perp} = \frac {-(c+1) (\vec v_{cB} - \vec v_{cA}) \cdot \hat n}{1/m_A+1/m_B + \left[ (1/I_A)(\vec r_{cA} \times \hat n)\times r_{cA}  + (1/I_B)(\vec r_{cB} \times \hat n) \times r_{rB}\right] \cdot {\hat n}}{\hat n}
 \label{impulse}
 \end{equation}
 
-where $\vec r_{cA}$ is the point of collision of body A respect to the center of mass $\vec p_A$, $\vec v_{cA}$ is the velocity of the collision point before the collision, $m_A$ is the mass of body A, $I_A$ is its moment of inertia. $\hat n$ is the direction of $(\vec p_B+\vec r'_B)-(\vec p_A+\vec r'_B)$, i.e. the norm ortogonal to the contact. Notice that $\vec r_{cA} = R_A\vec r_A$ and $\vec v_{cA} = \vec \omega_A \times \vec r_A + \vec v_A$. The same for $B$.
+where $\vec r_{cA}$ is the point of collision of body A respect to the center of mass $\vec p_A$, $\vec v_{cA}$ is the velocity of the collision point before the collision, $m_A$ is the mass of body A, $I_A$ is its moment of inertia. $\hat n$ is a versor orthogonal to the contact point. Notice that $\vec r_{cA} = R_A\vec r_A$ and $\vec v_{cA} = \vec \omega_A \times \vec r_A + \vec v_A$. The same for $B$.
 
 Once this impluse is computed we can deal with the it for each body by adding the contribution of the impulse to force and torque.
 
+In presence of friction at the contact point, there is also a tangential inpulse to take into account:
+
+\begin{equation}
+{\vec J}_{\parallel} = \frac{-(c_f+1) (\vec v_{cB} - \vec v_{cA}) \cdot \hat t}{1/m_A+1/m_B + \left[ (1/I_A)(\vec r_{cA} \times \hat t)\times r_{cA}  + (1/I_B)(\vec r_{cB} \times \hat t) \times r_{rB}\right] \cdot {\hat t}}{\hat t}
+\label{impulse}
+\end{equation}
+
+where $\hat t$ is a versor orthogonal to $n$ and to the relative velocity beween the colliding points. In general $c_f$ is different from $c$.
+
 \begin{eqnarray}
-\vec F_A &=& ... + d\vec F/dt \\
-\vec \tau_A &=& ... + \vec r_{cA} \times d \vec F/dt \\
-\vec F_B &=& ... - d\vec F/dt \\
-\vec \tau_B &=& ... - \vec r_{cB} \times d\vec F/dt 
+\vec K'_A &=& K_A + (\vec J_{\perp}+\vec J_{\parallel}) \\
+\vec \tau'_A &=& \tau_A + \vec r_{cA} \times (\vec J_{\perp}+\vec J_{\parallel}) \\
+\vec K'_B &=& K_B - (\vec J_{\perp}+\vec J_{\parallel}) \\
+\vec \tau'_B &=& \tau_B - \vec r_{cB} \times (\vec J_{\perp}+\vec J_{\parallel}) 
 \label{impulse2}
 \end{eqnarray}
 
