@@ -558,7 +558,7 @@ void Water::apply(float dt) {
   t=t+dt;
   for(int i=0; i<41; i++)
     for(int j=0; j<41; j++)
-      this->m[i][j] = level+wave*sin(i+speed*t);
+      this->m[i][j] = level+wave/2*sin(i+speed*t)+wave/2*sin(j*j);
   foreach(universe.body,universe.bodies) {
     Body &body = OBJ(universe.body);
     int i=(body.p(X)+x0)/dx;
@@ -623,9 +623,10 @@ void display() {
  * Code that draws an Body
  */
 void Body::draw() {
-  glColor3f(color(0),color(1),color(2));    
-  glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+  glPolygonMode(GL_FRONT,GL_FILL);
   for(int i=0; i<faces.size(); i++) {      
+    float k = 0.5*(1.0+(float)(i+1)/faces.size());
+    glColor3f(color(0)*k,color(1)*k,color(2)*k);    
     glBegin(GL_POLYGON);        
     for(int j=0; j<faces[i].size(); j++)
       glVertex3fv(vertices[faces[i][j]].v);
@@ -650,11 +651,11 @@ void SpringForce::draw() {
  * Draw the water
  */
 void Water::draw() {
-  glColor3f(0,0,1);
   glPolygonMode(GL_FRONT,GL_FILL);
   for(int i=0; i<40; i++) {
     glBegin(GL_POLYGON);
     for(int j=0; j<40; j++) {
+      glColor3f(0,0,0.5+0.25*(m[i][j]-level+wave)/wave);
       glVertex3fv(Vector(-x0+dx*i,m[i][j],-x0+dx*j).v);
       glVertex3fv(Vector(-x0+dx*i,m[i][j+1],-x0+dx*j+dx).v);
       glVertex3fv(Vector(-x0+dx*i+dx,m[i+1][j+1],-x0+dx*j+dx).v);
