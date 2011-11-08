@@ -154,12 +154,26 @@ InertiaTensor operator+(const InertiaTensor &a, const InertiaTensor &b) {
 }
 
 /**
+ * class Tree
+ */
+class Tree {
+public:
+  Tree *left;
+  Tree *right;
+  float radius;
+  int nvertices, nfaces;
+  Tree(float s=0, int nv=0, int nf=0, Tree *l=0, Tree *r=0) {
+    left = l; right = r;
+    radius = s; nvertices = nv; nfaces = nf;
+  }
+};
+
+/**
  * Class Body (describes a rigid body object)
  */
-class Body {
+  class Body : public Tree {
 public:
   // object shape
-  float radius;      // all vertices inside radius;
   array<Vector> r;   // vertices in local coordinates
   array<array<int> > faces;
   Vector color;      // color of the object; 
@@ -185,6 +199,7 @@ public:
   // ...
   Body(float m=1.0, bool locked=false) {
     radius = 0;
+    left = right = 0;
     this->locked = locked;
     this->m = 1.0;
     I(X,X)=I(Y,Y)=I(Z,Z)=m;
@@ -203,7 +218,9 @@ public:
  * rotate and shift all vertices from local to universe
  */
 void Body::update_vertices() {
-  Rr.resize(r.size());
+  nvertices = r.size();
+  nfaces = faces.size();
+  Rr.resize(nvertices);
   vertices.resize(r.size());
   for(int i=0; i<r.size(); i++) {
      Rr[i] = R*r[i];
@@ -513,6 +530,8 @@ InertiaTensor dI(float m, const Vector &r) {
  */
 Body operator+(const Body &a, const Body &b) {
   Body c;
+  c.color = 0.5*(a.color+b.color);
+  c.radius = max(a.radius+norm(a.p-c.p),b.radius+norm(b.p-c.p));
   c.m = (a.m+b.m);
   c.p = (a.m*a.p + b.m+b.p)/c.m;
   c.K = a.K+b.K;
@@ -523,9 +542,9 @@ Body operator+(const Body &a, const Body &b) {
   int n = a.r.size();
   // copy all r
   for(int i=0; i<n; i++)
-    c.r.push_back(a.r[i]+da);
+    c.r.push_back(a.vertices[i]-c.p);
   for(int i=0; i<b.r.size(); i++)
-    c.r.push_back(b.r[i]+db);
+    c.r.push_back(b.vertices[i]-c.p);
   // copy all faces and re-label r  
   int m = a.faces.size();
   c.faces.resize(a.faces.size()+b.faces.size());
@@ -534,6 +553,10 @@ Body operator+(const Body &a, const Body &b) {
   for(int j=0; j<b.faces.size(); j++)
     for(int k=0; k<b.faces[j].size(); k++)
       c.faces[j+m].push_back(b.faces[j][k]+n);  
+  c.left = new Tree(a.radius,a.nvertices,a.nfaces,a.left,a.right);
+  c.right = new Tree(b.radius,b.nvertices,b.nfaces,b.left,b.right);
+  c.nvertices = a.nvertices+b.nvertices;
+  c.nfaces = a.nfaces + b.nfaces;
   c.update_vertices();
   return c;
 }
@@ -571,7 +594,28 @@ void Body::loadObj(const string & file,float scale=0.5) {
 }
 
 /**
- * Make My Universe!
+ * Make a universe with an airplane
+ */
+class MyUniverseAirplane : public Universe {
+public:
+  void build_universe() {
+    Body &b = *new Body();
+    b.color=Vector(1,0,0); //red
+    b.loadObj("assets/plane.obj",0.5);
+    b.p = Vector(0,2,0);
+    b.K = Vector(0,0,+5);
+    b.L = Vector(-1,0,0);
+    bodies.insert(&b);
+  }
+  void callback() {
+    forEach(ibody,bodies) {
+      OBJ(ibody).K = OBJ(ibody).R*Vector(0,0,+5);
+    }
+  }
+};
+
+/**
+ * Make a universe with some bouncing balls
  */
 class MyUniverse : public Universe {
 public:
@@ -607,7 +651,58 @@ public:
   void callback() {}
 };
 
-MyUniverse universe;
+/**
+ * Make a universe with composite objects made of cubes
+ */
+class MyUniverseCubes : public Universe {
+public:
+  Body cube(const Vector &p, const Vector& theta, const Vector &color) {
+    Body cube;
+    cube.color = color;
+    cube.p = theta;
+    cube.R = Rotation(theta);
+    for(int x=-1; x<=+1; x+=2)
+      for(int y=-1; y<=+1; y+=2)
+	for(int z=-1; z<=+1; z+=2)
+	  cube.r.push_back(Vector(x,y,z));
+    cube.faces.resize(6);    
+    for(int i=0; i<2; i++) {
+      cube.faces[i].push_back(0+4*i);
+      cube.faces[i].push_back(1+4*i);
+      cube.faces[i].push_back(3+4*i);
+      cube.faces[i].push_back(2+4*i);
+      cube.faces[i+2].push_back(0+2*i);
+      cube.faces[i+2].push_back(1+2*i);
+      cube.faces[i+2].push_back(5+2*i);
+      cube.faces[i+2].push_back(4+2*i);
+      cube.faces[i+4].push_back(0+i);
+      cube.faces[i+4].push_back(2+i);
+      cube.faces[i+4].push_back(6+i);
+      cube.faces[i+4].push_back(4+i);
+    }
+    cube.update_vertices();
+    return cube;
+  }
+  void build_universe() {
+    Body *thing = new Body();
+    (*thing) = 
+      cube(Vector(0,4,0),Vector(0,1,0),Vector(0,1,0)) +
+      cube(Vector(1,4,0),Vector(1,0,0),Vector(0,1,0.2)) +
+      cube(Vector(1,4.5,.5),Vector(1,0,1),Vector(0.2,1));		    
+    (*thing).L = Vector(0,0.1,0);    
+    bodies.insert(thing);
+    Body *other_thing = new Body();
+    (*other_thing) = (*thing);
+    (*other_thing).p = Vector(-1,3,0);
+    (*other_thing).L = Vector(-0.1,0.0,0.1);
+    bodies.insert(other_thing);    
+  }
+  void callback() {}
+};
+
+// MyUniverse universe;
+// MyUniverseAirplane universe;
+MyUniverseCubes universe;
 
 /**
  * GLUT code below
