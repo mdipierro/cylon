@@ -493,6 +493,45 @@ For if two objects we do the following:
 \item update the force and torque to include one time contributon of the impulse (eq.~\ref{impulse2}).
 \end{itemize}
 
+\section{Geometry of collision}
+
+Here we are concerned with the problem of termining if two objects have collided. If the objects are made of vertices and faces the possible collisions can be vertex-vertex, vertex-edge, verted-face, edge-face, face-face. Most of them can be ignored but vertex-face and edge-edge.
+
+Let's focus on vertex-face collision. In order to resolve the collisions we need to:
+\begin{itemize}
+\item detect a collision has occurred
+\item find the normal to the collision
+\item find the collision point
+\item find the penetration
+\end{itemize}
+
+(not necessarily in this order). We will assume the body is convex (the center of mass is inside the body).
+
+We will label $\vec p_A$ the center of mass of body $A$, $\vec p_B$ the center of mass of body $B$, $\vec q$ the collision point, $\hat n$ the normal to the collision point, $\vec f_1$,$\vec f_2$,$\vec f_3$ the vertices of the face of $A$ and $\vec u$ the vertex of body $B$ which may have hit the face of object $A$.
+
+First we compute $\vec n$:
+\begin{equation}
+\vec n = (\vec f_2 - \vec f_1) \times (\vec f_3 - \vec f_1)
+\end{equation}
+and normalized it $\hat n = \vec n / n$.
+Than we compute $q$:
+\begin{equation}
+\vec q = \vec u - (\vec u \cdot \hat n - \vec f_1 \cdot \hat n){\hat n}
+\end{equation}
+And we check that $\vec q$ lays inside the face:
+\begin{eqnarray}
+|(\vec q - \vec f_1)\times(\vec f_2-\vec f_1)|&+& \\
+|(\vec q - \vec f_2)\times(\vec f_3-\vec f_2)|&+& \\
+|(\vec q - \vec f_3)\times(\vec f_1-\vec f_3)| &<=& |(\vec f_1 - \vec f_2)\times(\vec f_3-\vec f_1)|
+\end{eqnarray}
+If this is the case, we check the the projection along $\hat n$ of the points $\hat p_A$ (the center of mass of $A$), the vertex $\hat v$, the collision point $\vec q$ and $\vec p_B$ (the center of mass of $B$) and in proper spatial order:
+\begin{equation}
+((\vec p_A - \vec p_B) \cdot \hat n) ((\vec u - \vec q) \cdot\hat n) >=0
+\end{equation}
+If the collision occurs the penetration is $\vec p - \vec q$.
+
+Finally we loop over all faces of $A$, and vertices of $B$, we run the above algotithm and if a collision occurs we resolve the penetration, we compute the velocity of the collision point and we appli the impulse at collision point as discussed in the previous section.
+
 \section{Implementation}
 
 \include{implementation}

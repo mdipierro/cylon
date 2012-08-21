@@ -154,26 +154,12 @@ InertiaTensor operator+(const InertiaTensor &a, const InertiaTensor &b) {
 }
 
 /**
- * class Tree
- */
-class Tree {
-public:
-  Tree *left;
-  Tree *right;
-  float radius;
-  int nvertices, nfaces;
-  Tree(float s=0, int nv=0, int nf=0, Tree *l=0, Tree *r=0) {
-    left = l; right = r;
-    radius = s; nvertices = nv; nfaces = nf;
-  }
-};
-
-/**
  * Class Body (describes a rigid body object)
  */
-  class Body : public Tree {
+class Body {
 public:
   // object shape
+  float radius;
   array<Vector> r;   // vertices in local coordinates
   array<array<int> > faces;
   Vector color;      // color of the object; 
@@ -199,7 +185,6 @@ public:
   // ...
   Body(float m=1.0, bool locked=false) {
     radius = 0;
-    left = right = 0;
     this->locked = locked;
     this->m = 1.0;
     I(X,X)=I(Y,Y)=I(Z,Z)=m;
@@ -218,9 +203,7 @@ public:
  * rotate and shift all vertices from local to universe
  */
 void Body::update_vertices() {
-  nvertices = r.size();
-  nfaces = faces.size();
-  Rr.resize(nvertices);
+  Rr.resize(r.size());
   vertices.resize(r.size());
   for(int i=0; i<r.size(); i++) {
      Rr[i] = R*r[i];
@@ -443,7 +426,7 @@ public:
     restitution = c;
   }
   bool detect() { return true; }
-  void All2AllCollisions::resolve(float dt) {
+  void resolve(float dt) {
     set<Body*>::iterator ibodyA, ibodyB;
     forEach(ibodyA,*bodies) {
       forEach(ibodyB,*bodies) {
@@ -464,7 +447,6 @@ public:
     }
   }
 };
-
 
 /**
  * A Universe stores bodies, forces, constraints
@@ -532,6 +514,7 @@ Body operator+(const Body &a, const Body &b) {
   Body c;
   c.color = 0.5*(a.color+b.color);
   c.radius = max(a.radius+norm(a.p-c.p),b.radius+norm(b.p-c.p));
+  c.R = Rotation();
   c.m = (a.m+b.m);
   c.p = (a.m*a.p + b.m+b.p)/c.m;
   c.K = a.K+b.K;
@@ -553,10 +536,6 @@ Body operator+(const Body &a, const Body &b) {
   for(int j=0; j<b.faces.size(); j++)
     for(int k=0; k<b.faces[j].size(); k++)
       c.faces[j+m].push_back(b.faces[j][k]+n);  
-  c.left = new Tree(a.radius,a.nvertices,a.nfaces,a.left,a.right);
-  c.right = new Tree(b.radius,b.nvertices,b.nfaces,b.left,b.right);
-  c.nvertices = a.nvertices+b.nvertices;
-  c.nfaces = a.nfaces + b.nfaces;
   c.update_vertices();
   return c;
 }
@@ -700,9 +679,9 @@ public:
   void callback() {}
 };
 
-// MyUniverse universe;
+MyUniverse universe;
 // MyUniverseAirplane universe;
-MyUniverseCubes universe;
+// MyUniverseCubes universe;
 
 /**
  * GLUT code below
