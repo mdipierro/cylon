@@ -34,12 +34,61 @@ showstringspaces=false
 \tableofcontents
 \newpage
 
-\section{Newton}
+\section{Basic Definitions}
 
-Everything starts with Newton's Laws which we will phrase as follows:
+Caveats: {\it here only talk about classical physics (200 years old stuff) and therefor all definitions and formulas are consistent within that framework. Classical physics works very well for objects that have relative velocity much smaller than the speed of light and are macroscopic thus not affected by the measurement process.}
+
+The word {\bf Physics} comes the greek {\it physik\'e} which means
+{\it science of nature}. It is the study of natural phenomena by means of
+quantitative observations and formal languages such as
+mathematics. The ultimate goal of physics is that describing the
+entire universe using few fundamental laws expressed in the
+mathematical languages.
+
+A {\bf Cartesian coordinate system} is a framework that allows to specify each point uniquely using numerical coordinates, which are the distances from the point to D fixed perpendicular directed lines, measured in the same unit of length. Each reference line is called a coordinate axis or just axis of the system, and the point where they meet is its origin. The coordinates can also be defined as the positions of the perpendicular projections of the point onto the two axes, expressed as signed distances from the origin. Given two points identified by coordinates $\vec p = (p_x,p_y,p_z)$ and $\vec q = (q_x,q_y,q_z)$, the distance between the two points if given by 
+\begin{equation}
+\sqrt{(p_x-q_x)^2+(p_y-q_y)^2+(p_z-q_z)^2}
+\end{equation}
+and indicated with $d_{pq} = \left|\vec p - \vec q\right|$.
+
+A {\bf reference frame} or {\bf observational frame of reference} is a set of axes and their orientation, tied together with information about the motion of the observer. For example you can have two observers at the same location at the same moment in time but in motion one respect to the other. They may use the same set of axes and the same orientation yet, when measuring speed of objects respect to their own speed they will find different values. In particular if we get in the shoes of observer $A$ and we measure the speed of point $P$ we find veloticy $\vec v_{P-A}$. If we instead get of the shoes of observer $B$ and we measure the speed of point $P$ we find a velocity $\vec v_{P-B}$. This means that the velocity of observer $B$ as measured by $A$ is $\vec v_{B-A} = \vec v_{P-A}-\vec v_{P-B}$ and the veloticy of $A$ as measured by by is $\vec v_{A-B} = - v_{B-A} = \vec v_{P-B}-\vec v_{P-A}$.
+
+A reference frame is called an {\bf intertial reference frame} if it describes time and space homogeneously, isotropically, and in a time-independent manner. An observer is in an inertial reference frame if the observer feels no force acting upon him/her. All inertial frames are in a state of constant, rectilinear motion with respect to one another.
+If an observer $A$ in an inertial reference frame and he/she measures the position and velocity of a point $P$ as $\vec p,\vec v_p$, then a different observer $B$ from a reference frame moving at velocity $\vec w$ respect to $A$ will measure different position and velocity for the same point $P$, $\vec p' = \vec p-\vec w t,\vec v'_p = \vec p-\vec w$. Laws of physics like $F=ma$ are normally formulated in an inertial reference frame and require ``corrections'' when used in a non-inertial reference frame.
+
+{\bf Degrees of freedom} are the number of parameters required to specify the state of a system. A particle is only identified by its coordinates (3 numbers in 3D). A rigid body is identified by its position and its orientation (3+3=6 numbers in 3D). A system comprised of $n$ point particles and $m$ constraints has $3n-m$ degrees of freedom. A system comprised of $n$ rigid bodies and $m$ constraints has $6n-m$ degrees of freedom.
+
+\section{Notation}
+
+3D Vectors are indicated with a {\it vector} on top, as in $\vec p$. The norm of a vector is indicated with $|\vec p|$ or with the same letter as the vector without decoration, $p$. The direction of a vector $\vec p/p$ is indicated with a {\it hat}, $\hat p$ and it is called a {\it versor}.
+
+We use the letter $t$ to label time, the label $i$ to label parts of a system (for example components of a rigid body), the labels $j=0,1,2=X,Y,Z$ and $k=0,1,2=X,Y,Z$ to indicate components of a vector. Quaternions also have an extra index $j,k=W=3$. 4D Vectors (used here to represent quaternions) are marked with a {\it tilde} superscript, as in $\tilde \theta$.
+
+Here is a legend for the notation used in these notes:
+
+\begin{tabular}{|l|c|} \hline
+Name & Symbol \\ \hline
+position & $\vec p$ \\
+velocity & $\vec v$ \\
+acceleration & $\vec a$ \\
+momentum & $\vec K = m \vec v$ \\
+mass & $m$ \\
+force & $\vec F$ \\
+% orientation & $\tilde{\theta}$ \\
+rotation & $R$ \\
+angular velocity & $\vec \omega$ \\
+angular acceleration & $\vec \alpha$ \\
+angular momentum & $\vec L = I \vec \omega$ \\
+inertia tensor & $I$ \\ \hline
+\end{tabular}
+
+\section{Newtonian Physics}
+
+Everything starts with Newton's Laws which we will paraphrase as
+follows:
 
 \begin{quote}
-Objects like to move at constant velocity. If an object changes its velocity we say it is subject to a force. A force is something external that acts on the object and is proportional to its acceleration. The proportionality factor is a property of the object which we call mass.
+When observed from an inertial reference frame, objects like to move at constant velocity. If an object changes its velocity we say it is subject to a force. A force is something external that acts on the object and is proportional to its acceleration. The proportionality factor is a property of the object which we call mass.
 \end{quote}
 
 Let's measure the position of an object at different times...
@@ -101,9 +150,7 @@ In other words: {\it if we know the position and the velocity of the object, and
 
 The set of eqs.~\ref{p_update} and \ref{v_update} are called an {\it Euler integrator}. Technically they are only correct in the limit $dt\rightarrow 0$ but they provide a decent approximation for small $dt$ if the force does not change significnaly over the time interval $dt$.
 
-\section{Revised Newton}
-
-Is $m$ constant? What if $m$ changes with time? A more accurate way to write the Newton equation is in terms of a quantity we call {\it momentum}, defined as:
+So far we assumed $m$ is constant. What if $m$ changes with time? A more accurate way to write the Newton equation is in terms of a quantity we call {\it momentum}, defined as:
 \begin{equation}
 \vec K_t \equiv m_t \vec v_t 
 \end{equation}
@@ -143,7 +190,7 @@ where $g = 9.8$meters/second.
 \begin{equation}
   \vec F_t^{spring} \equiv \kappa (|\vec q_t - \vec p_t|-L) \frac{\vec q_t-\vec p_q}{|\vec q_t-\vec p_t|}
 \end{equation}
-where $\vec p_t$ is the position of the mass at time $t$, $q_t$ is the position of the other end of the spring at the same time, $\kappa$ is a constant that describes the rigidity of the spring, and $L$ is the rest length of the pring. Notice that when $|\vec p_t - \vec q_t|=L$ there is no force, when $|\vec p_t - \vec q_t|>L$ the force is attractive and when $|\vec p_t - \vec q_t|<L$ the force is repulsive. 
+where $\vec p_t$ is the position of the mass at time $t$, $q_t$ is the position of the other end of the spring at the same time, $\kappa$ is a constant that describes the rigidity of the spring, and $L$ is the rest length of the spring. Notice that when $|\vec p_t - \vec q_t|=L$ there is no force, when $|\vec p_t - \vec q_t|>L$ the force is attractive and when $|\vec p_t - \vec q_t|<L$ the force is repulsive. 
 
 \subsection{Friction}
 
@@ -215,7 +262,7 @@ where $c=\cos(\theta)$ and $s=\sin(\theta)$ and $t=(1-\cos(\theta))$.
 \includegraphics[width=5cm]{images/rotation.png}
 \end{center}
 
-\section{Composition of rotations}
+\section{Composition of Rotations}
 
 If a body is oriented according to $R_{\hat n}(\theta)$ and it gets rotated by another matrix $R_{\hat m}(\beta)$ the body will end up being oriented in a different direction:
 \begin{equation}
@@ -240,9 +287,10 @@ where
 \end{equation}
 is called angular velocity.
 
-\section{Spinning}
+\section{Spinning Objects}
 
-We now consider a rotation propotional to time, $t$. In particular a rotation around a direction $\hat n=(n_x,n_y,n_z)$ of an angle $\theta_t = \omega t$ ($\theta$ depends on $t$). Repeating the previous steps and replacing $\theta_t$ for $\theta$ in eq.~\ref{quaternion} we obtain:
+When a body is rotating with contant angular velocity $\vec \omega$, its rotation is proportional to time $t$ only. We say the body is spinning. Here we consider body spinning around the direction $\hat n=(n_x,n_y,n_z)$ of an anglular velocity $\omega$. The angular position of the object at time $t$ is therefore $\theta_t = \omega t$.
+It is orinetation at time $t$ is therefore given by:
 \begin{equation}
 \vec \theta_t \equiv (\omega t n_x, \omega t n_y, \omega t n_z)
 \end{equation}
@@ -317,7 +365,7 @@ and eq.~\ref{newton_rot} is still valid, while eq.~\ref{angular_momentum3} becom
 \vec L = \sum _i \vec r_i \times (m_i \vec \omega \times \vec r_i) = I \vec \omega
 \label{angular_momentum4}
 \end{equation}
-where $I$ is a 3x3 matrix (technically a tensor) of components:
+where $I$ is a 3x3 matrix, called {\it Inertia Tensor} with components:
 \begin{equation}
 I_{jk} \equiv \sum_i m_i (\delta_{jk} |\vec r_i|^2 - r_{i,j} r_{i,k})
 \label{momentum_inertia}
@@ -352,7 +400,9 @@ and the velocity of the point is
 
 %($R(...)$ is described in eq.~\ref{rotation}).
 
-\section{Quaternions (optional)}
+\section{Quaternions}
+
+Quaterions provide a way to representant an orientation in 3D without using a rotation but using a 4-vector instead. They are not used in the code because they are not necessary.
 
 It can be convenient to define a four dimension vector (marked by a tilde):
 \begin{equation}
@@ -370,7 +420,7 @@ $2(\theta_0 \theta_3 - \theta_1 \theta_3)$ & $2(\theta_0 \theta_3 + \theta_1 \th
 \label{rotation}
 \end{equation}
 
-The 4-vector $\tilde \theta$ defines an {\it orientation} and it is called a {\it quaternion} although its methematical properties are not relevant here and are not discussed. The associated matrix $R(\tilde \theta)$ can be used to rotates the points of an object into an orientation.
+The 4-vector $\tilde \theta$ defines an {\it orientation} and it is called a {\it quaternion} although its mathematical properties are not relevant here and are not discussed. The associated matrix $R(\tilde \theta)$ can be used to rotates the points of an object into an orientation.
 
 If a body is oriented according to $R(\tilde \theta)$ and it gets rotated by another matrix $R_{\hat n}(\beta)$ the body will end up being oriented in a different direction:
 \begin{equation}
@@ -396,7 +446,7 @@ $(\beta_2 \theta_3 + \beta_0 \theta_1 - \beta_1 \theta_0)$
 
 where $(\beta_0,\beta_1,\beta_2)=(\beta n_x,\beta n_y,\beta n_z)$
 
-Eq.~\ref{theta_update} will come up handly later when talking about spinning objects. In this case for an infinitesimal rotation $\beta=\omega dt$:
+Eq.~\ref{theta_update} will come up handy later when talking about spinning objects. In this case for an infinitesimal rotation $\beta=\omega dt$:
 \begin{equation}
 \tilde \theta' = \tilde \theta + \frac{1}{2}\vec \omega \tilde \theta dt
 \end{equation}
@@ -423,6 +473,12 @@ I_{total} &=& \sum_i I_i + \Delta I(m_i, \vec p_i - \vec p_{total})
 where
 \begin{equation}
 \Delta I(m, \vec r)_{jk} \equiv m (\delta_{jk} |\vec r|^2 - r_j r_k)
+\end{equation}
+
+The object $I$ is a $3\times 3$ matrix and it is called {\it Inertia Tensor}. The inertia tensor depends on the orienttation of the object. If the object is rotated by $R$, the inertia tensor changes as:
+
+\begin{equation}
+I \rightarrow I' = R I R^{-1}
 \end{equation}
 
 \section{Collisions}
@@ -466,9 +522,9 @@ In the case of rigid bodies eq.~\ref{collision} applies to the points of contact
 
 where $\vec r_{cA}$ is the point of collision of body A respect to the center of mass $\vec p_A$, $\vec v_{cA}$ is the velocity of the collision point before the collision, $m_A$ is the mass of body A, $I_A$ is its moment of inertia. $\hat n$ is a versor orthogonal to the contact point. Notice that $\vec r_{cA} = R_A\vec r_A$ and $\vec v_{cA} = \vec \omega_A \times \vec r_A + \vec v_A$. The same for $B$.
 
-Once this impluse is computed we can deal with the it for each body by adding the contribution of the impulse to force and torque.
+Once this impulse is computed we can deal with the it for each body by adding the contribution of the impulse to force and torque.
 
-In presence of friction at the contact point, there is also a tangential inpulse to take into account:
+In presence of friction at the contact point, there is also a tangential impulse to take into account:
 
 \begin{equation}
 {\vec J}_{\parallel} = \frac{-(c_f+1) (\vec v_{cB} - \vec v_{cA}) \cdot \hat t}{1/m_A+1/m_B + \left[ (1/I_A)(\vec r_{cA} \times \hat t)\times r_{cA}  + (1/I_B)(\vec r_{cB} \times \hat t) \times r_{rB}\right] \cdot {\hat t}}{\hat t}
@@ -490,12 +546,12 @@ For if two objects we do the following:
 \item find the point of contact and compute $r_{cA}$, $r_{cB}$
 \item find the compenetration and shift the objects back to cancel compenetration
 \item compute the impulse (eq.~\ref{impulse})
-\item update the force and torque to include one time contributon of the impulse (eq.~\ref{impulse2}).
+\item update the force and torque to include one time contribution of the impulse (eq.~\ref{impulse2}).
 \end{itemize}
 
 \section{Geometry of collision}
 
-Here we are concerned with the problem of termining if two objects have collided. If the objects are made of vertices and faces the possible collisions can be vertex-vertex, vertex-edge, verted-face, edge-face, face-face. Most of them can be ignored but vertex-face and edge-edge.
+Here we are concerned with the problem of terminating if two objects have collided. If the objects are made of vertices and faces the possible collisions can be vertex-vertex, vertex-edge, verted-face, edge-face, face-face. Most of them can be ignored but vertex-face and edge-edge.
 
 Let's focus on vertex-face collision. In order to resolve the collisions we need to:
 \begin{itemize}
@@ -530,38 +586,10 @@ If this is the case, we check the the projection along $\hat n$ of the points $\
 \end{equation}
 If the collision occurs the penetration is $\vec p - \vec q$.
 
-Finally we loop over all faces of $A$, and vertices of $B$, we run the above algotithm and if a collision occurs we resolve the penetration, we compute the velocity of the collision point and we appli the impulse at collision point as discussed in the previous section.
+Finally we loop over all faces of $A$, and vertices of $B$, we run the above algorithm and if a collision occurs we resolve the penetration, we compute the velocity of the collision point and we apply the impulse at collision point as discussed in the previous section.
 
 \section{Implementation}
 
 \include{implementation}
-
-\section{Appendix}
-
-\section{Notation}
-
-3D Vectors are indicated with a {\it vector} on top, as in $\vec p$. The norm of a vector is indicated with $|\vec p|$ or with the same letter as the vector without decoration, $p$. The direction of a vector $\vec p/p$ is indicated with a {\it hat}, $\hat p$ and it is called a {\it verson}.
-
-4D Vectors (used here to represent quaternions) are marked with a {\it tilde} superscript, as in $\tilde \theta$.
-
-We use the letter $t$ to label time, the label $i$ to label parts of a system (for example components of a rigid body), the labels $j=0,1,2=X,Y,Z$ and $k=0,1,2=X,Y,Z$ to indicate components of a vector. Quaternions also have an extra index $j,k=W=3$.
-
-\subsection{Legend}
-
-\begin{tabular}{|l|c|} \hline
-Name & Symbol \\ \hline
-position & $\vec p$ \\
-velocity & $\vec v$ \\
-acceleration & $\vec a$ \\
-momentum & $\vec K = m \vec v$ \\
-mass & $m$ \\
-force & $\vec F$ \\
-% orientation & $\tilde{\theta}$ \\
-rotation & $R$ \\
-angular velocity & $\vec \omega$ \\
-angular accelleration & $\vec \alpha$ \\
-angular momentum & $\vec L = I \vec \omega$ \\
-moment of inertia & $I$ \\ \hline
-\end{tabular}
 
 \end{document}

@@ -679,9 +679,9 @@ public:
   void callback() {}
 };
 
-MyUniverse universe;
+// MyUniverse universe;
 // MyUniverseAirplane universe;
-// MyUniverseCubes universe;
+MyUniverseCubes universe;
 
 /**
  * GLUT code below
