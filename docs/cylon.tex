@@ -34,9 +34,11 @@ showstringspaces=false
 \tableofcontents
 \newpage
 
-\section{Basic Definitions}
+Source: {\tt https://github.com/mdipierro/cylon}
 
-Caveats: {\it here only talk about classical physics (200 years old stuff) and therefor all definitions and formulas are consistent within that framework. Classical physics works very well for objects that have relative velocity much smaller than the speed of light and are macroscopic thus not affected by the measurement process.}
+\section{Definitions}
+
+Disclaimer :{\it This document is a work in progress. Here only talk about classical physics (200 years old stuff) and all definitions and formulas are consistent within that framework. Classical physics works well for objects that have relative velocity much smaller than the speed of light and are macroscopic thus not affected by the measurement process.}
 
 The word {\bf Physics} comes the greek {\it physik\'e} which means
 {\it science of nature}. It is the study of natural phenomena by means of
@@ -45,13 +47,13 @@ mathematics. The ultimate goal of physics is that describing the
 entire universe using few fundamental laws expressed in the
 mathematical languages.
 
-A {\bf Cartesian coordinate system} is a framework that allows to specify each point uniquely using numerical coordinates, which are the distances from the point to D fixed perpendicular directed lines, measured in the same unit of length. Each reference line is called a coordinate axis or just axis of the system, and the point where they meet is its origin. The coordinates can also be defined as the positions of the perpendicular projections of the point onto the two axes, expressed as signed distances from the origin. Given two points identified by coordinates $\vec p = (p_x,p_y,p_z)$ and $\vec q = (q_x,q_y,q_z)$, the distance between the two points if given by 
+A {\bf Cartesian coordinate system} is a framework that allows to specify each point uniquely using numerical coordinates, which are the distances from the point to D fixed perpendicular directed lines, measured in the same unit of length. Each reference line is called a coordinate axis or just axis of the system, and the point where they meet is its origin. The coordinates can also be defined as the positions of the perpendicular projections of the point onto the two axes, expressed as signed distances from the origin. Given two points identified by coordinates $\vec p = (p_x,p_y,p_z)$ and $\vec q = (q_x,q_y,q_z)$, the distance between the two points is given by 
 \begin{equation}
 \sqrt{(p_x-q_x)^2+(p_y-q_y)^2+(p_z-q_z)^2}
 \end{equation}
 and indicated with $d_{pq} = \left|\vec p - \vec q\right|$.
 
-A {\bf reference frame} or {\bf observational frame of reference} is a set of axes and their orientation, tied together with information about the motion of the observer. For example you can have two observers at the same location at the same moment in time but in motion one respect to the other. They may use the same set of axes and the same orientation yet, when measuring speed of objects respect to their own speed they will find different values. In particular if we get in the shoes of observer $A$ and we measure the speed of point $P$ we find veloticy $\vec v_{P-A}$. If we instead get of the shoes of observer $B$ and we measure the speed of point $P$ we find a velocity $\vec v_{P-B}$. This means that the velocity of observer $B$ as measured by $A$ is $\vec v_{B-A} = \vec v_{P-A}-\vec v_{P-B}$ and the veloticy of $A$ as measured by by is $\vec v_{A-B} = - v_{B-A} = \vec v_{P-B}-\vec v_{P-A}$.
+A {\bf reference frame} or {\bf observational frame of reference} is a set of axes and their orientation, tied together with information about the motion of the observer. For example you can have two observers at the same location at the same moment in time but in motion one respect to the other. They may use the same set of axes and the same orientation yet, when measuring speed of objects respect to their own speed they will find different values. In particular if we get in the shoes of observer $O$ and we measure the speed of point $P$ we find veloticy $\vec v$. If we instead get of the shoes of observer $O'$ and we measure the speed of point $P$ we find a velocity $\vec v'$. This means that the velocity of observer $O'$ as measured by $O$ is $\vec w = \vec v-\vec v'$ and the veloticy of $O$ as measured by $O'$ is $\vec w' = - \vec w = \vec v'-\vec v$. This law of composition of velocities is called {\bf Galilean Invariance}.
 
 A reference frame is called an {\bf intertial reference frame} if it describes time and space homogeneously, isotropically, and in a time-independent manner. An observer is in an inertial reference frame if the observer feels no force acting upon him/her. All inertial frames are in a state of constant, rectilinear motion with respect to one another.
 If an observer $A$ in an inertial reference frame and he/she measures the position and velocity of a point $P$ as $\vec p,\vec v_p$, then a different observer $B$ from a reference frame moving at velocity $\vec w$ respect to $A$ will measure different position and velocity for the same point $P$, $\vec p' = \vec p-\vec w t,\vec v'_p = \vec p-\vec w$. Laws of physics like $F=ma$ are normally formulated in an inertial reference frame and require ``corrections'' when used in a non-inertial reference frame.
@@ -68,7 +70,9 @@ Here is a legend for the notation used in these notes:
 
 \begin{tabular}{|l|c|} \hline
 Name & Symbol \\ \hline
-position & $\vec p$ \\
+point & $A$, $B$, $P$, ... \\
+position & $\vec p$, $\vec p_A$, $\vec q$, ... \\
+component of a vector & $p_k$ for $k=1,2,3$ or $k=X,Y,Z$ \\
 velocity & $\vec v$ \\
 acceleration & $\vec a$ \\
 momentum & $\vec K = m \vec v$ \\
@@ -82,10 +86,11 @@ angular momentum & $\vec L = I \vec \omega$ \\
 inertia tensor & $I$ \\ \hline
 \end{tabular}
 
-\section{Newtonian Physics}
+We use the symbol $=$ to indicate en equivalence (result of an observation, consequence of a formula, or an assumption) but we use the symbol $\equiv$ to indicate a definition (the left hand term defined in terms of the right hand term).
 
-Everything starts with Newton's Laws which we will paraphrase as
-follows:
+\section{Newton First and Second Laws}
+
+Classical Mechanis starts with Newton's Laws. The first two of them can be summarized as follows:
 
 \begin{quote}
 When observed from an inertial reference frame, objects like to move at constant velocity. If an object changes its velocity we say it is subject to a force. A force is something external that acts on the object and is proportional to its acceleration. The proportionality factor is a property of the object which we call mass.
@@ -176,7 +181,9 @@ If multiple forces act of the same object, $\vec F$ is the sum of those forces:
 \end{equation}
 where $\vec F_i$ is the force caused by interation $i$ (could be gravity, could be a spiring, etc.). This called {\it d'Alambert's principle}.
 
-\section{Types of forces}
+\section{Types of Forces and Newton Third Law}
+
+Here we are exclusively intersted in the following types of forces:
 
 \subsection{Gravity}
 
@@ -198,6 +205,8 @@ where $\vec p_t$ is the position of the mass at time $t$, $q_t$ is the position 
   \vec F_t^{friction} \equiv - \gamma \vec v_t
 \end{equation}
 $\gamma$ is called the {\it friction coefficient}.
+
+Newton's third law states that if a body A exercises a force $F$ on a body B, then body B exercies a force $-F$ on body $A$. In any simulation we have to account for this using force generators that link objects to each other.
 
 \section{Rotations}
 
@@ -240,7 +249,7 @@ $-\sin(\theta)$ & 0 & $\cos(\theta)$
 
 A rotation of the angle $\theta$ around the $Z$-axes can be written as
 \begin{equation}
-R_Z(\theta) = \left(\begin{tabular}{ccc}
+R_Z(\theta) \equiv \left(\begin{tabular}{ccc}
 $\cos(\theta)$ & $-\sin(\theta)$ & 0 \\
 $\sin(\theta)$ & $\cos(\theta)$ & 0 \\
 0 & 0 & 1
@@ -250,32 +259,37 @@ $\sin(\theta)$ & $\cos(\theta)$ & 0 \\
 A rotation of the angle $\theta$ around an arbitrary direction $\hat n = (n_x,n_y,n_z)$ is given by:
 
 \begin{equation}
-R_{\hat n}(\theta) \equiv \left(\begin{tabular}{ccc} 
+R_{\hat n}(\theta) = \left(\begin{tabular}{ccc} 
 $t n_x n_x+c$ & $t n_x n_y-s n_z$ & $t n_x n_z+s n_y$ \\
 $t n_x n_y+s n_z$ & $t n_y n_y+c$ & $t n_y n_z-s n_x$ \\
 $t n_x n_z-s n_y$ & $t n_y n_z+s n_x$ & $t n_z n_z+c$
 \end{tabular}\right)
+\label{rotexpanded}
 \end{equation}
 where $c=\cos(\theta)$ and $s=\sin(\theta)$ and $t=(1-\cos(\theta))$.
+
+It is also conventinent to merge the directional information $\hat n$ with the angular information $\theta$ into a single vector $\vec \theta \equiv \theta \hat n$ and use the more compact notation:
+
+\begin{equation}
+R(\vec \theta) \equiv R_{\hat n}(\theta)
+\end{equation}
 
 \begin{center}
 \includegraphics[width=5cm]{images/rotation.png}
 \end{center}
 
-\section{Composition of Rotations}
+A rotation can also be used to represent the orientation of a body.
 
-If a body is oriented according to $R_{\hat n}(\theta)$ and it gets rotated by another matrix $R_{\hat m}(\beta)$ the body will end up being oriented in a different direction:
+If a body is oriented according to $R(\vec \theta)$ and it gets rotated by another matrix $R(\vec \beta)$ the body will end up being oriented in a different direction:
 \begin{equation}
-R_{\hat n'}(\theta') = R_{\hat m}(\beta) R_{\hat n}(\theta)
+R(\vec \theta') = R(\vec \beta) R(\vec \theta)
 \end{equation}
-which we can rewrite with with a change of notation as
-\begin{equation}
-R' = R(\vec \beta) R
-\end{equation}
-where $R = R_{\hat n}(\theta)$, $R'=R_{\hat n'}(\theta')$, $R(\vec \beta)\equiv R_{\hat m}(\beta)$ and
-\begin{equation}
-\vec \beta = (\beta m_x, \beta m_y, \beta m_z)
-\end{equation}
+notice that
+\begin{eqnarray}
+\vec \beta &=& (\beta m_x, \beta m_y, \beta m_z) \\
+\vec \theta &=& (\theta n_x, \theta n_y, \theta n_z) \\
+\vec \theta' &=& (\theta' n'_x, \theta' n'_y, \theta' n'_z)
+\end{eqnarray}
 For an infinitesimal rotation $\beta = \omega dt$ we can write
 \begin{equation}
 R' = R(\vec \omega dt) R
@@ -285,7 +299,7 @@ where
 \vec \omega \equiv (\omega n_x, \omega n_y, \omega n_z)
 \label{avelocity}
 \end{equation}
-is called angular velocity.
+is called angular velocity. What is the explicit expression for $R(\vec \omega dt)$ and first order in $dt$?
 
 \section{Spinning Objects}
 
@@ -351,16 +365,25 @@ Notice that if we substiture eq.~\ref{vomega} which gives the velocity in terms 
 \end{equation}
 The coefficient $(m |\vec r|^2)$ is called {\it moment of inertia}.
 
-For a rigid body comprised of many masses rotating at the origin of the axes we can define:
+Let us now consider a rigid body comprised of many masses subject to constraints. For each mass $m_i$ at point $r_i$ we can write:
+\begin{eqnarray}
+  \vec \tau_0 &=& \vec L_0 \\
+  \vec \tau_1 &=& \vec L_1 \\
+  \vec \tau_2 &=& \vec L_2 \\
+  ... && ... \\
+  \sum_i \vec \tau_i &=& \sum_i \vec L_i \\
+  \vec \tau &=& \vec L
+\end{eqnarray}
+In the last step we have used the following definitions:
 \begin{equation}
-\vec \tau \equiv \sum_i \vec r_i \times \vec F_i
+\vec \tau \equiv \sum_i \vec \tau_i = \sum_i \vec r_i \times \vec F_i
 \end{equation}
 and
 \begin{equation}
-\vec L \equiv \sum_i \vec r_i \times \vec K_i = m_i  \vec r_i \times \vec v_i
+\vec L \equiv \sum_i \vec L_i = \sum_i \vec r_i \times \vec K_i = m_i  \vec r_i \times \vec v_i
 \label{angular_momentum3}
 \end{equation}
-and eq.~\ref{newton_rot} is still valid, while eq.~\ref{angular_momentum3} becomes:
+Eq.~\ref{newton_rot} is still valid, but eq.~\ref{angular_momentum3} becomes:
 \begin{equation}
 \vec L = \sum _i \vec r_i \times (m_i \vec \omega \times \vec r_i) = I \vec \omega
 \label{angular_momentum4}
@@ -399,6 +422,42 @@ and the velocity of the point is
 \end{equation}
 
 %($R(...)$ is described in eq.~\ref{rotation}).
+
+The position of a point $\vec p$ rotated by $R$ around point $\vec q$ is given by:
+
+\begin{equation}
+\vec p' = R(\vec p-\vec q)+\vec q = R \vec p + (1-R)\vec q
+\end{equation}
+
+\section{Assembling Rigid Bodies}
+
+Consider a composite rigid body whose parts are smaller rigid bodies characterized by
+\begin{center}
+\begin{tabular}{cccc} \hline
+Component & Position & Mass & Moment of Inertial \\ \hline
+0 & $\vec p_0$ & $m_0$ & $I_0$ \\ 
+1 & $\vec p_1$ & $m_1$ & $I_1$ \\ 
+2 & $\vec p_2$ & $m_2$ & $I_2$ \\ 
+... & ... & ... & ... \\ \hline
+\end{tabular}
+\end{center}
+
+The composite object will have:
+\begin{eqnarray}
+m_{total} &=& \sum_i m_i \\
+\vec p_{cm} &=& \sum \vec p_i m_i/m_{total} \\
+I_{total} &=& \sum_i I_i + \Delta I(m_i, \vec p_i - \vec p_{total})
+\end{eqnarray}
+where
+\begin{equation}
+\Delta I(m, \vec r)_{jk} \equiv m (\delta_{jk} |\vec r|^2 - r_j r_k)
+\end{equation}
+
+The object $I$ is a $3\times 3$ matrix and it is called {\it Inertia Tensor}. The inertia tensor depends on the orienttation of the object. If the object is rotated by $R_t$, the inertia tensor changes:
+
+\begin{equation}
+I_0 \rightarrow I_t = R_t I_0 R_t^{-1}
+\end{equation}
 
 \section{Quaternions}
 
@@ -451,35 +510,6 @@ Eq.~\ref{theta_update} will come up handy later when talking about spinning obje
 \tilde \theta' = \tilde \theta + \frac{1}{2}\vec \omega \tilde \theta dt
 \end{equation}
 
-\section{Assembling Rigid Bodies}
-
-Consider a composite rigid body whose parts are smaller rigid bodies characterized by
-\begin{center}
-\begin{tabular}{cccc} \hline
-Component & Position & Mass & Moment of Inertial \\ \hline
-0 & $\vec p_0$ & $m_0$ & $I_0$ \\ 
-1 & $\vec p_1$ & $m_1$ & $I_1$ \\ 
-2 & $\vec p_2$ & $m_2$ & $I_2$ \\ 
-... & ... & ... & ... \\ \hline
-\end{tabular}
-\end{center}
-
-The composite object will have:
-\begin{eqnarray}
-m_{total} &=& \sum_i m_i \\
-\vec p_{cm} &=& \sum \vec p_i m_i/m_{total} \\
-I_{total} &=& \sum_i I_i + \Delta I(m_i, \vec p_i - \vec p_{total})
-\end{eqnarray}
-where
-\begin{equation}
-\Delta I(m, \vec r)_{jk} \equiv m (\delta_{jk} |\vec r|^2 - r_j r_k)
-\end{equation}
-
-The object $I$ is a $3\times 3$ matrix and it is called {\it Inertia Tensor}. The inertia tensor depends on the orienttation of the object. If the object is rotated by $R$, the inertia tensor changes as:
-
-\begin{equation}
-I \rightarrow I' = R I R^{-1}
-\end{equation}
 
 \section{Collisions}
 
@@ -494,7 +524,7 @@ If it is a faction of the closing velocity (relative velocity before the collisi
 \vec v_{separating} = -c \vec v_{closing}
 \label{collision}
 \end{equation}
-where $c$ is a restitution coefficient and 
+where $c$ is a restitution coefficient and
 \begin{equation}
 \vec v_{closing} \equiv \vec v_B - \vec v_A
 \end{equation}
