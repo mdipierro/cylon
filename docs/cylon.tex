@@ -510,6 +510,38 @@ Eq.~\ref{theta_update} will come up handy later when talking about spinning obje
 \tilde \theta' = \tilde \theta + \frac{1}{2}\vec \omega \tilde \theta dt
 \end{equation}
 
+\section{Conservation Laws}
+
+The third Newton law says that for each force $\vec F_i$ there is an opposite force $\vec F_j = -F_i$ acting on a different body. This means that we add up all forces acting on all bodies:
+\begin{equation}
+\sum_i \vec F_i = \sum_i \mathrm{d}\vec K_i/mathrm{d}t = 0
+\end{equation}
+(where we used the dot notation to indicate a derivative). This is equivalent to te statement that
+\begin{equation}
+\sum_i \vec K_i = constant
+\end{equation}
+This is called {\it conservation of momentum}. It states that the sum of momenta $K$ of all bodies has to be contant.
+
+It can be proven (but we do not because it requires Lagrangian Mechanics) that for each inveriance of the system there is an associated conservation law.
+
+Translation invariance implies {\it Consevration of momentum}: 
+\begin{equation}
+\sum_i \vec K_i = constant
+\end{equation}
+Rotation invariance implies {\it Conservation of angular momentum}:
+\begin{equation}
+\sum_i \vec L_i = constant
+\end{equation}
+Time translation invariance implies {\it Conservation of energy}:
+\begin{equation}
+\sum_i E_i = constant
+\end{equation}
+where $E_i$, the energy of body $i$ and it equal to:
+\begin{equation}
+E_i = \frac 12 m v_i^2 + \frac 12 I \omega_i^2 - \int_{t_0}^t \vec F_i(t) \cdot \vec v_i(t) dt
+- \int_{t0}^t \vec \tau_i(t) \cdot\vec \omega_i(t) dt
+\end{equation}
+The difference pieces are called respectively: kinetic energy, rotational kinetic energy, poetntial energy, and rotational potential energy. They measure respectively: how fast the body moves, how fast it spins, how much work was done by the forces acting upon it, and how much work was done by the torques accting upon it. $t_0$ is a time that one can start arbitrarily and by convention.
 
 \section{Collisions}
 
