@@ -639,7 +639,7 @@ public:
   Body cube(const Vector &p, const Vector& theta, const Vector &color) {
     Body cube;
     cube.color = color;
-    cube.p = theta;
+    cube.p = p;
     cube.R = Rotation(theta);
     for(int x=-1; x<=+1; x+=2)
       for(int y=-1; y<=+1; y+=2)
