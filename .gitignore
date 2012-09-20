@@ -1,4 +1,5 @@
 *~
+*.swp
 *.bak2
 docs/*.log
 docs/*.aux
