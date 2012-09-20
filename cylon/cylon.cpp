@@ -30,6 +30,7 @@ const float PRECISION = 0.00001;
 const int X = 0;
 const int Y = 1;
 const int Z = 2;
+const float FPS = 60.0f;
 
 /**
  * Define class Vector
@@ -708,7 +709,7 @@ void createWindow(const char* title) {
  */
 void update() {
   // evolve world
-  universe.dt = 0.016f;	// 60fps fixed rate.
+  universe.dt = 1 / FPS;
   universe.evolve();
   glutPostRedisplay();
 }
@@ -813,6 +814,15 @@ void keyboard(unsigned char key, int x, int y) {
 void motion(int x, int y) { }
 
 /**
+ * Called on each timer.
+ */
+void timer(int value)
+{
+  glutPostRedisplay();
+  glutTimerFunc(FPS, timer, 0);
+}
+
+/**
  * The main function. Everythign starts here.
  */
 int main(int argc, char** argv) {
@@ -828,6 +838,7 @@ int main(int argc, char** argv) {
   glutIdleFunc(update);
   glutMouseFunc(mouse);
   glutMotionFunc(motion);  
+  glutTimerFunc(FPS, timer, 0);
   // Enter into a loop
   glutMainLoop();  
   return 0;
