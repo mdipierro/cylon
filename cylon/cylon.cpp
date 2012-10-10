@@ -10,6 +10,7 @@
 #include <string>
 #include <iostream>
 #include "math.h"
+#include "stdlib.h"
 #include "vector"
 #include "set"
 #if defined(_MSC_VER)
@@ -31,6 +32,8 @@ const int X = 0;
 const int Y = 1;
 const int Z = 2;
 const float FPS = 60.0f;
+
+
 
 /**
  * Define class Vector
@@ -164,6 +167,7 @@ public:
   array<Vector> r;   // vertices in local coordinates
   array<array<int> > faces;
   Vector color;      // color of the object; 
+  bool visible;
   // properties of the body /////////////////////////
   bool locked;       // if set true, don't integrate
   float m;           // mass
@@ -187,11 +191,12 @@ public:
   Body(float m=1.0, bool locked=false) {
     radius = 0;
     this->locked = locked;
-    this->m = 1.0;
+    this->m = m;
     I(X,X)=I(Y,Y)=I(Z,Z)=m;
     inv_m = 1.0/m;
     inv_I = 1.0/I;
     R = Rotation();
+	visible = true;
   };
   void clear() { F(X)=F(Y)=F(Z)=tau(X)=tau(Y)=tau(Z)=0; }
   void update_vertices();
@@ -296,7 +301,7 @@ public:
     this->kappa = kappa; this->L = L;
   }
   void apply(float dt) {
-    Vector d = body->vertices[i]-pin;
+    Vector d = pin-body->vertices[i];
     float n = norm(d);
     Vector F = kappa*(n-L)*d/n;
     body->F = body->F+F;
@@ -485,11 +490,11 @@ public:
     // integrate
     forEach(ibody,bodies)
       if(!OBJ(ibody).locked)
-	OBJ(ibody).integrator(dt);
+	     OBJ(ibody).integrator(dt);
     // handle collisions (not quite right yet)
     forEach(iconstraint,constraints)
       if(OBJ(iconstraint).detect())
-	OBJ(iconstraint).resolve(dt);
+	     OBJ(iconstraint).resolve(dt);
     frame++;
   }
 public:
@@ -594,6 +599,88 @@ public:
   }
 };
 
+float random() {
+  int n = 10000;
+  return (float)(rand() % n)/n;
+}
+
+array<float> random_vector(int n, float M) {
+  float one_norm = 0.0;
+  array<float> m(n);
+  for(int i=0; i<n; i++) { m[i] = random(); one_norm += m[i]; }
+  for(int i=0; i<n; i++) m[i]=M*m[i]/one_norm;
+  return m;
+}
+
+/**
+ * Make a universe with an exploding body
+ */
+
+class SimpleUniverse : public Universe {
+private:
+  Body* xb;
+public:  
+  void build_universe() {
+    float m = 1.0;
+    float pi = 3.1415926535897931;
+    float v = 5.0;
+    float theta = pi/2.2;
+    Body &b = *new Body(m);
+    b.color = Vector(1,0,0); //red
+    b.loadObj("assets/sphere.obj",0.5);
+    b.p = Vector(0,20,-20);
+    b.K = Vector(0,0,0);
+    b.L = Vector(0,0,0);
+    bodies.insert(&b);
+    forces.insert(new GravityForce(&b,1.0));
+    xb = &b;
+  }
+  void callback() {
+    if(frame==150) {
+      int n = 500;
+      float vx,vy,vz;
+      float E = 0.5;
+      float mysum_x=0, mysum_y=0, mysum_z=0;
+      array<float> m = random_vector(n,xb->m);
+      array<float> eps_x(n), eps_y(n), eps_z(n);
+      xb->visible = false;
+      for(int j=0; j<n; j++) {
+	cout << j << "  " << random() << endl;
+	Body &a = *new Body(m[j]);
+	a.color = Vector(random(),random(),random());
+	a.loadObj("assets/sphere.obj",0.5*pow((double)m[j]/xb->m,(double)1.0/3));
+	a.p = Vector(xb->p(X), xb->p(Y), xb->p(Z));
+	if(j<n-1) {
+	  eps_x[j] = (2.0*random()-1)*sqrt(E);
+	  eps_y[j] = (2.0*random()-1)*sqrt(E);
+	  eps_z[j] = (2.0*random()-1)*sqrt(E);
+	  mysum_x += m[j]*eps_x[j];
+	  mysum_y += m[j]*eps_y[j];
+	  mysum_z += m[j]*eps_z[j];
+	} else {
+	  eps_x[j] = -mysum_x/m[j];
+	  eps_y[j] = -mysum_y/m[j];
+	  eps_z[j] = -mysum_z/m[j];
+	}
+	vx = xb->v(X) + eps_x[j];
+	vy = xb->v(Y) + eps_y[j];
+	vz = xb->v(Z) + eps_z[j];
+	a.K = Vector(m[j]*vx, m[j]*vy, m[j]*vz);
+	bodies.insert(&a);
+	forces.insert(new GravityForce(&a,1.0));
+      }
+    }
+    
+    float restitution = 0.5;
+    forEach(ibody,bodies)
+      
+      if(OBJ(ibody).p(Y)<0 && OBJ(ibody).K(Y)<0) {
+	OBJ(ibody).p(Y)=-restitution*OBJ(ibody).p(Y);
+	OBJ(ibody).K(Y)=-restitution*OBJ(ibody).K(Y);
+      }
+  }
+};
+
 /**
  * Make a universe with some bouncing balls
  */
@@ -682,7 +769,8 @@ public:
 
 // MyUniverse universe;
 // MyUniverseAirplane universe;
-MyUniverseCubes universe;
+// MyUniverseCubes universe;
+SimpleUniverse universe;
 
 /**
  * GLUT code below
@@ -723,7 +811,8 @@ void display() {
   glLoadIdentity();
   gluLookAt(0.0,3.5,10.0, 0.0,3.5,0.0, 0.0,1.0,0.0);
   forEach(universe.ibody,universe.bodies)
-    OBJ(universe.ibody).draw();
+    if(OBJ(universe.ibody).visible)
+		OBJ(universe.ibody).draw();
   forEach(universe.iforce,universe.forces)
     OBJ(universe.iforce).draw();
   forEach(universe.iconstraint,universe.constraints)
