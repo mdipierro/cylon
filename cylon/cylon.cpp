@@ -23,6 +23,7 @@ using namespace std;
 /**
  * Define useful macros and constants
  */
+#define self (*this)
 #define array vector // to avoid name collions
 #define forXYZ(i) for(int i=0; i<3; i++)
 #define forEach(i,s) for(i=(s).begin();i!=(s).end();i++)
@@ -91,6 +92,7 @@ public:
   Matrix() { forXYZ(i) forXYZ(j) m[i][j] = 0; }
   const float operator()(int i, int j) const { return m[i][j]; }
   float &operator()(int i, int j) { return m[i][j]; }
+  Matrix t();
 };
 
 /**
@@ -101,16 +103,19 @@ Vector operator*(const Matrix &R, const Vector &v) {
 		 R(Y,X)*v(X)+R(Y,Y)*v(Y)+R(Y,Z)*v(Z),
 		 R(Z,X)*v(X)+R(Z,Y)*v(Y)+R(Z,Z)*v(Z));
 }
+
 Matrix operator*(const Matrix &R, const Matrix &S) {
   Matrix T;
   forXYZ(i) forXYZ(j) forXYZ(k) T(i,j) += R(i,k)*S(k,j);
   return T;
 }
+
 float det(const Matrix &R) {
   return R(X,X)*(R(Z,Z)*R(Y,Y)-R(Z,Y)*R(Y,Z))
     -R(Y,X)*(R(Z,Z)*R(X,Y)-R(Z,Y)*R(X,Z))
     +R(Z,X)*(R(Y,Z)*R(X,Y)-R(Y,Y)*R(X,Z));
 }
+
 Matrix operator/(float c, const Matrix &R) {
   Matrix T;
   float d = c/det(R);
@@ -125,6 +130,13 @@ Matrix operator/(float c, const Matrix &R) {
   T(Z,Z) = (R(Y,Y)*R(X,X)-R(Y,X)*R(X,Y))*d;
   return T;
 }
+
+Matrix Matrix::t() {
+  Matrix Mt;
+  forXYZ(j) forXYZ(k) Mt(j,k)=self(k,j);
+  return Mt;
+}
+
 
 /**
  * Class Rotation is a Matrix
@@ -178,7 +190,6 @@ public:
   Matrix R;          // orientation
   Vector L;          // angular momentum
   // auxiliary variables ///////////////////////////
-  float inv_m;       // 1/m
   Matrix inv_I;      // 1/I
   Vector F;
   Vector tau;
@@ -188,16 +199,18 @@ public:
   array<Vector> vertices; // rotated and shifted r's
   // forces and constraints
   // ...
-  Body(float m=1.0, bool locked=false) {
-    radius = 0;
-    this->locked = locked;
+  Body(float m=1.0, float radius=0.2, bool locked=false) {
     this->m = m;
+    this->radius = radius;
+    this->locked = locked;
+    this->R = Rotation();
     I(X,X)=I(Y,Y)=I(Z,Z)=m;
-    inv_m = 1.0/m;
-    inv_I = 1.0/I;
-    R = Rotation();
-	visible = true;
-  };
+    this->inv_I = 1.0/I;
+    this->r.push_back(Vector(0,0,0)); // object contains one point
+    this->color = Vector(1,0,0);
+    this->visible = true;
+    this->update_vertices();
+  }
   void clear() { F(X)=F(Y)=F(Z)=tau(X)=tau(Y)=tau(Z)=0; }
   void update_vertices();
   void integrator(float dt);
@@ -209,8 +222,8 @@ public:
  * rotate and shift all vertices from local to universe
  */
 void Body::update_vertices() {
-  Rr.resize(r.size());
-  vertices.resize(r.size());
+  if(Rr.size()!=r.size()) Rr.resize(r.size());
+  if(vertices.size()!=r.size()) vertices.resize(r.size());
   for(int i=0; i<r.size(); i++) {
      Rr[i] = R*r[i];
      vertices[i]=Rr[i]+p;
@@ -220,9 +233,9 @@ void Body::update_vertices() {
 /**
  * Euler integrator
  */
-void Body::integrator(float dt) {
-  v     = inv_m*K;
-  omega = inv_I*L;
+void Body::integrator(float dt) {  
+  v     = (1.0/m)*K;
+  omega = R*(inv_I*(R.t()*L));     // R*inv_I*R.t() in rotated frame
   p     = p + v*dt;                // shift
   K     = K + F*dt;                // push
   R     = Rotation(omega*dt)*R;    // rotate
@@ -271,15 +284,18 @@ public:
     this->bodyB = bodyB; this->iB = iB;
     this->kappa = kappa; this->L = L;
   }
-  void apply(float dt) {
-    Vector d = bodyB->vertices[iB]-bodyA->vertices[iA];
+  void apply(float dt) {    
+    Vector d = ((iB<0)?(bodyB->p):(bodyB->vertices[iB]))-
+      ((iA<0)?(bodyA->p):(bodyA->vertices[iA]));
     float n = norm(d);
     if(n>PRECISION) {
       Vector F = kappa*(n-L)*(d/n);
       bodyA->F = bodyA->F+F;
       bodyB->F = bodyB->F-F;
-      bodyA->tau = bodyA->tau + cross(bodyA->Rr[iA],F);
-      bodyB->tau = bodyB->tau - cross(bodyB->Rr[iB],F);
+      if(iA>=0)
+	bodyA->tau = bodyA->tau + cross(bodyA->Rr[iA],F);
+      if(iB>=0)
+	bodyB->tau = bodyB->tau - cross(bodyB->Rr[iB],F);
     }
   }
   void draw();
@@ -301,11 +317,12 @@ public:
     this->kappa = kappa; this->L = L;
   }
   void apply(float dt) {
-    Vector d = pin-body->vertices[i];
+    Vector d = pin - ((i<0)?(body->p):(body->vertices[i]));
     float n = norm(d);
     Vector F = kappa*(n-L)*d/n;
     body->F = body->F+F;
-    body->tau = body->tau + cross(body->Rr[i],F);
+    if(i>=0)
+      body->tau = body->tau + cross(body->Rr[i],F);
   }
 };
 
@@ -379,7 +396,7 @@ public:
     Vector v_cB = cross(B.omega,r_B)+B.v;
     Vector crossA = cross(r_cA,n);
     Vector crossB = cross(r_cB,n);
-    Vector dF = (-(c-1)/(A.inv_m+B.inv_m+
+    Vector dF = (-(c-1)/(1.0/A.m+1.0/B.m+
 			 crossA*crossA/IA+
 			 crossB*crossB/IB)*(v_cB-v_cB)*n)*n;
   }
@@ -498,8 +515,8 @@ public:
     frame++;
   }
 public:
-  virtual void build_universe()=0;
-  virtual void callback()=0;
+  virtual void build_universe() { bodies.insert(new Body()); };
+  virtual void callback() {};
 };
 
 /**
@@ -508,7 +525,7 @@ public:
 InertiaTensor dI(float m, const Vector &r) {
   InertiaTensor I;
   float r2 = r*r;
-  forXYZ(j) forXYZ(k) I(j,k) = m*((j==k)?r2:0-r(j)*r(k));
+  forXYZ(j) forXYZ(k) I(j,k) = m*(((j==k)?r2:0)-r(j)*r(k));
   return I;
 }
 
@@ -518,22 +535,32 @@ InertiaTensor dI(float m, const Vector &r) {
  */
 Body operator+(const Body &a, const Body &b) {
   Body c;
+  
   c.color = 0.5*(a.color+b.color);
   c.radius = max(a.radius+norm(a.p-c.p),b.radius+norm(b.p-c.p));
   c.R = Rotation();
   c.m = (a.m+b.m);
-  c.p = (a.m*a.p + b.m+b.p)/c.m;
+  c.p = (a.m*a.p + b.m*b.p)/c.m;
   c.K = a.K+b.K;
-  c.L = (a.p-c.p)*a.K+(b.p-c.p)*b.K;
+  c.L = a.L+cross(a.p-c.p,a.K)+b.L+cross(b.p-c.p,b.K);
   Vector da = a.p-c.p;
   Vector db = b.p-c.p;
-  c.I = a.I+dI(a.m,da)+b.I+dI(b.m,db);
-  int n = a.r.size();
+  int na = a.r.size();  
+  int nb = b.r.size();  
+  c.I(X,X) = c.I(Y,Y)= c.I(Z,Z) =0;
   // copy all r
-  for(int i=0; i<n; i++)
-    c.r.push_back(a.vertices[i]-c.p);
-  for(int i=0; i<b.r.size(); i++)
-    c.r.push_back(b.vertices[i]-c.p);
+  Vector v;
+  c.r.resize(na+nb);
+  for(int i=0; i<na; i++) {
+    v = a.R*a.r[i]+da;
+    c.r[i] = v; 
+    c.I = c.I + dI(a.m/na,v);
+  }
+  for(int i=0; i<nb; i++) {
+    v = b.R*b.r[i]+db;
+    c.r[i+na] = v;
+    c.I = c.I + dI(b.m/nb,v);
+  }
   // copy all faces and re-label r  
   int m = a.faces.size();
   c.faces.resize(a.faces.size()+b.faces.size());
@@ -541,7 +568,8 @@ Body operator+(const Body &a, const Body &b) {
     c.faces[j]=a.faces[j];
   for(int j=0; j<b.faces.size(); j++)
     for(int k=0; k<b.faces[j].size(); k++)
-      c.faces[j+m].push_back(b.faces[j][k]+n);  
+      c.faces[j+m].push_back(b.faces[j][k]+na);  
+  c.inv_I = 1.0/c.I;
   c.update_vertices();
   return c;
 }
@@ -553,6 +581,8 @@ void Body::loadObj(const string & file,float scale=0.5) {
   ifstream input;
   string line;
   float x,y,z;
+  r.resize(0);
+  faces.resize(0);
   input.open(file.c_str());
   if(input.is_open()) {
     while(input.good()) {
@@ -567,7 +597,7 @@ void Body::loadObj(const string & file,float scale=0.5) {
 	  Vector p = scale*Vector(x,y,z);
 	  r.push_back(p);
 	  radius = max(radius,norm(p));
-	} else if (initialVal=="f") {
+	} else  if (initialVal=="f") {
 	  array<int> path;
 	  while(instream >> x) path.push_back(x-1);
 	  faces.push_back(path);
@@ -599,15 +629,15 @@ public:
   }
 };
 
-float random() {
+float uniform(float a=0, float b=1) {
   int n = 10000;
-  return (float)(rand() % n)/n;
+  return a+(b-a)*(float)(rand() % n)/n;
 }
 
 array<float> random_vector(int n, float M) {
   float one_norm = 0.0;
   array<float> m(n);
-  for(int i=0; i<n; i++) { m[i] = random(); one_norm += m[i]; }
+  for(int i=0; i<n; i++) { m[i] = uniform(); one_norm += m[i]; }
   for(int i=0; i<n; i++) m[i]=M*m[i]/one_norm;
   return m;
 }
@@ -626,9 +656,9 @@ public:
     float v = 5.0;
     float theta = pi/2.2;
     Body &b = *new Body(m);
-    b.color = Vector(1,0,0); //red
+    b.color = Vector(uniform(),uniform(),uniform()); //red
     b.loadObj("assets/sphere.obj",0.5);
-    b.p = Vector(0,20,-20);
+    b.p = Vector(0,10,-10);
     b.K = Vector(0,0,0);
     b.L = Vector(0,0,0);
     bodies.insert(&b);
@@ -637,7 +667,7 @@ public:
   }
   void callback() {
     if(frame==150) {
-      int n = 500;
+      int n = 50;
       float vx,vy,vz;
       float E = 0.5;
       float mysum_x=0, mysum_y=0, mysum_z=0;
@@ -645,15 +675,14 @@ public:
       array<float> eps_x(n), eps_y(n), eps_z(n);
       xb->visible = false;
       for(int j=0; j<n; j++) {
-	cout << j << "  " << random() << endl;
+	cout << j << "  " << uniform() << endl;
 	Body &a = *new Body(m[j]);
-	a.color = Vector(random(),random(),random());
-	a.loadObj("assets/sphere.obj",0.5*pow((double)m[j]/xb->m,(double)1.0/3));
+	a.color = Vector(uniform(),uniform(),uniform());
 	a.p = Vector(xb->p(X), xb->p(Y), xb->p(Z));
 	if(j<n-1) {
-	  eps_x[j] = (2.0*random()-1)*sqrt(E);
-	  eps_y[j] = (2.0*random()-1)*sqrt(E);
-	  eps_z[j] = (2.0*random()-1)*sqrt(E);
+	  eps_x[j] = uniform(-1,1)*sqrt(E);
+	  eps_y[j] = uniform(-1,1)*sqrt(E);
+	  eps_z[j] = uniform(-1,1)*sqrt(E);
 	  mysum_x += m[j]*eps_x[j];
 	  mysum_y += m[j]*eps_y[j];
 	  mysum_z += m[j]*eps_z[j];
@@ -692,7 +721,7 @@ public:
       Body &b = *new Body();
       b.color=Vector(((i+1)%4)?1:0,i%2,(i%3)?1:0);
       b.loadObj("assets/sphere.obj");
-      b.p = Vector(i,i+2,-i);
+      b.p = Vector(i,2*i+2,-i);
       b.K = Vector(0.1*i,0.01*i,0);
       b.L = Vector(0.5,0.5*i,0.1*i);
       bodies.insert(&b);
@@ -709,13 +738,12 @@ public:
 					     Vector(0,0,-1)));
       // forces.insert(new FrictionForce(&b,0.5));
       if(i==2)
-	forces.insert(new SpringForce(b_old,0,&b,0,0.01,0));
+	forces.insert(new SpringForce(b_old,-1,&b,-1,2.0,3.0));
       b_old = &b;
     }
     constraints.insert(new All2AllCollisions(&bodies,0.8));
     // forces.insert(new Water(&bodies,3.0));
   }
-  void callback() {}
 };
 
 /**
@@ -764,13 +792,32 @@ public:
     (*other_thing).L = Vector(-0.1,0.0,0.1);
     bodies.insert(other_thing);    
   }
-  void callback() {}
 };
 
-// MyUniverse universe;
+class CompositionUniverse: public Universe {
+private:
+  Body b;
+public:
+  void build_universe() {
+    Body a;
+    float x,y,z;
+    for(int i=0; i<8; i++) {
+      x = 2*((i>>0)&1)-1;
+      y = 2*((i>>1)&1)-1;
+      z = 2*((i>>2)&1)-1;
+      a.p = Vector(x,y+1,z-5);
+      if(i==0) b = a; else b=b+a;
+    }
+    b.L = Vector(5,10,0);
+    bodies.insert(&b);
+  }
+};
+
+MyUniverse universe;
 // MyUniverseAirplane universe;
 // MyUniverseCubes universe;
-SimpleUniverse universe;
+// SimpleUniverse universe;
+// CompositionUniverse universe;
 
 /**
  * GLUT code below
@@ -827,15 +874,25 @@ void display() {
  */
 void Body::draw() {
   glPolygonMode(GL_FRONT,GL_FILL);
-  for(int i=0; i<faces.size(); i++) {      
-    float k = 0.5*(1.0+(float)(i+1)/faces.size());
-    glColor3f(color(0)*k,color(1)*k,color(2)*k);    
-    glBegin(GL_POLYGON);        
-    for(int j=0; j<faces[i].size(); j++)
-      glVertex3fv(vertices[faces[i][j]].v);
-    glVertex3fv(vertices[faces[i][0]].v);
-    glEnd();
-  }
+  if(faces.size()==0) {
+    glColor3f(color(0),color(1),color(2));
+    int n = vertices.size();
+    for(int i=0; i<n; i++) {
+      glPushMatrix();
+      glTranslatef(vertices[i].v[X],vertices[i].v[Y],vertices[i].v[Z]);
+      glutSolidSphere(0.2,10,10);
+      glPopMatrix();
+    }
+  } else
+    for(int i=0; i<faces.size(); i++) {
+      float k = 0.5*(1.0+(float)(i+1)/faces.size());
+      glColor3f(color(0)*k,color(1)*k,color(2)*k);    
+      glBegin(GL_POLYGON);        
+      for(int j=0; j<faces[i].size(); j++)
+	glVertex3fv(vertices[faces[i][j]].v);
+      glVertex3fv(vertices[faces[i][0]].v);
+      glEnd();
+    }
 }
 
 /**
@@ -845,8 +902,10 @@ void SpringForce::draw() {
   glColor3f(0,0,0);
   glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
   glBegin(GL_LINES);
-  glVertex3fv(bodyA->vertices[iA].v);
-  glVertex3fv(bodyB->vertices[iB].v);
+  if(iA<0)  glVertex3fv(bodyA->p.v);
+  else glVertex3fv(bodyA->vertices[iA].v);
+  if(iB<0)  glVertex3fv(bodyB->p.v);
+  else glVertex3fv(bodyB->vertices[iB].v);
   glEnd();
 }
 
