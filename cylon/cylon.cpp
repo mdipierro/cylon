@@ -1,8 +1,8 @@
 /** */
-// Program name: cylon.cpp         
-// Author:       Massimo Di Pierro 
-// License:      BSD               
-/**                                 
+// Program name: cylon.cpp
+// Author:       Massimo Di Pierro
+// License:      BSD
+/**
  * Import the necessary libraries
  */
 #include "fstream"
@@ -32,9 +32,9 @@ const float PRECISION = 0.00001;
 const int X = 0;
 const int Y = 1;
 const int Z = 2;
-const float FPS = 60.0f;
-
-
+const float DT  = 0.017f; // Hard-coded dt for Universe::evolve()
+const int MSPF = 17; // msec per frame: glutTimerFunc() only takes integers for params
+                     // lower value = higher frame rate
 
 /**
  * Define class Vector
@@ -79,8 +79,8 @@ Vector versor(const Vector &v) {
 }
 Vector cross(const Vector &v, const Vector &w) {
   return Vector(v(Y)*w(Z)-v(Z)*w(Y),
-		v(Z)*w(X)-v(X)*w(Z),
-		v(X)*w(Y)-v(Y)*w(X));
+                v(Z)*w(X)-v(X)*w(Z),
+                v(X)*w(Y)-v(Y)*w(X));
 }
 
 /**
@@ -100,8 +100,8 @@ public:
  */
 Vector operator*(const Matrix &R, const Vector &v) {
   return Vector(R(X,X)*v(X)+R(X,Y)*v(Y)+R(X,Z)*v(Z),
-		 R(Y,X)*v(X)+R(Y,Y)*v(Y)+R(Y,Z)*v(Z),
-		 R(Z,X)*v(X)+R(Z,Y)*v(Y)+R(Z,Z)*v(Z));
+                 R(Y,X)*v(X)+R(Y,Y)*v(Y)+R(Y,Z)*v(Z),
+                 R(Z,X)*v(X)+R(Z,Y)*v(Y)+R(Z,Z)*v(Z));
 }
 
 Matrix operator*(const Matrix &R, const Matrix &S) {
@@ -145,7 +145,7 @@ class Rotation : public Matrix {
 public:
   Rotation() { forXYZ(i) forXYZ(j) m[i][j] = (i==j)?1:0; }
   Rotation(const Vector& v) {
-    float theta = norm(v);    
+    float theta = norm(v);
     if(theta<PRECISION) {
       forXYZ(i) forXYZ(j) m[i][j] = (i==j)?1:0;
     } else {
@@ -178,7 +178,7 @@ public:
   float radius;
   array<Vector> r;   // vertices in local coordinates
   array<array<int> > faces;
-  Vector color;      // color of the object; 
+  Vector color;      // color of the object;
   bool visible;
   // properties of the body /////////////////////////
   bool locked;       // if set true, don't integrate
@@ -233,7 +233,7 @@ void Body::update_vertices() {
 /**
  * Euler integrator
  */
-void Body::integrator(float dt) {  
+void Body::integrator(float dt) {
   v     = (1.0/m)*K;
   omega = R*(inv_I*(R.t()*L));     // R*inv_I*R.t() in rotated frame
   p     = p + v*dt;                // shift
@@ -258,11 +258,11 @@ public:
  * Gravity is a Force
  */
 class GravityForce : public Force {
-public:  
+public:
   Body *body;
   float g;
   GravityForce(Body *body, float g = 0.01) {
-    this->body = body; this->g = g;    
+    this->body = body; this->g = g;
   }
   void apply(float dt) {
     body->F(Y) -= (body->m)*g;
@@ -279,12 +279,12 @@ public:
   int iA, iB;
   float kappa, L;
   SpringForce(Body *bodyA, int iA, Body *bodyB, int iB,
-	      float kappa, float L) {
+              float kappa, float L) {
     this->bodyA = bodyA; this->iA = iA;
     this->bodyB = bodyB; this->iB = iB;
     this->kappa = kappa; this->L = L;
   }
-  void apply(float dt) {    
+  void apply(float dt) {
     Vector d = ((iB<0)?(bodyB->p):(bodyB->vertices[iB]))-
       ((iA<0)?(bodyA->p):(bodyA->vertices[iA]));
     float n = norm(d);
@@ -293,9 +293,9 @@ public:
       bodyA->F = bodyA->F+F;
       bodyB->F = bodyB->F-F;
       if(iA>=0)
-	bodyA->tau = bodyA->tau + cross(bodyA->Rr[iA],F);
+        bodyA->tau = bodyA->tau + cross(bodyA->Rr[iA],F);
       if(iB>=0)
-	bodyB->tau = bodyB->tau - cross(bodyB->Rr[iB],F);
+        bodyB->tau = bodyB->tau - cross(bodyB->Rr[iB],F);
     }
   }
   void draw();
@@ -311,7 +311,7 @@ public:
   Vector pin;
   float kappa, L;
   AnchoredSpringForce(Body *body, int i, Vector pin,
-		      float kappa, float L) {
+                      float kappa, float L) {
     this->body = body; this->i = i;
     this->pin = pin;
     this->kappa = kappa; this->L = L;
@@ -350,11 +350,11 @@ public:
 class Water: public Force {
 public:
   float level, wave, speed;
-  float m[41][41];  
+  float m[41][41];
   float t, x0,dx;
   set<Body*> *bodies;
-  Water(set<Body*> *bodies, float level, 
-	float wave=0.2, float speed=0.2) {
+  Water(set<Body*> *bodies, float level,
+        float wave=0.2, float speed=0.2) {
     this->bodies = bodies;
     this->level = level; this->wave = wave, this->speed = speed;
     t = 0; x0 = 5.0; dx = 0.25;
@@ -364,14 +364,14 @@ public:
     t = t+dt;
     for(int i=0; i<41; i++)
       for(int j=0; j<41; j++)
-	this->m[i][j] = level+wave/2*sin(speed*t+i)+wave/2*sin(0.5*i*j);
+        this->m[i][j] = level+wave/2*sin(speed*t+i)+wave/2*sin(0.5*i*j);
     forEach(ibody,*bodies) {
       Body &body = OBJ(ibody); // dereference
       int i = (body.p(X)+x0)/dx;
       int j = (body.p(Z)+x0)/dx;
       if(body.p(Y)<m[i][j]) {
-	body.F = body.F + (Vector(0,1,0)-2.0*(body.v))*dt;    
-	body.L = (1.0-dt)*body.L;
+        body.F = body.F + (Vector(0,1,0)-2.0*(body.v))*dt;
+        body.L = (1.0-dt)*body.L;
       }
     }
   }
@@ -382,12 +382,12 @@ public:
  * A Constraint has detect and resolve methods.
  */
 class Constraint {
-public:  
+public:
   virtual bool detect()=0;
   virtual void resolve(float dt)=0;
   virtual void draw() {}
-  Vector impluse(const Body &A, const Body &B, 
-		 Vector &r_A, Vector &r_B, Vector n, float c) {
+  Vector impluse(const Body &A, const Body &B,
+                 Vector &r_A, Vector &r_B, Vector n, float c) {
     float IA; // FIX
     float IB; // FIX
     Vector r_cA = A.R*r_A;
@@ -397,8 +397,8 @@ public:
     Vector crossA = cross(r_cA,n);
     Vector crossB = cross(r_cB,n);
     Vector dF = (-(c-1)/(1.0/A.m+1.0/B.m+
-			 crossA*crossA/IA+
-			 crossB*crossB/IB)*(v_cB-v_cB)*n)*n;
+                         crossA*crossA/IA+
+                         crossB*crossB/IB)*(v_cB-v_cB)*n)*n;
   }
 };
 
@@ -412,10 +412,10 @@ public:
   Vector n,d;
   float penetration, restitution;
   // d is the discance of the plane from origin
-  // n is a versor orthogonal to plane 
+  // n is a versor orthogonal to plane
   // (in opposite direction from collision)
   PlaneConstraint(Body *body, float restitution,
-		  const Vector &d, const Vector &n) {
+                  const Vector &d, const Vector &n) {
     this->body = body;
     this->n = n; this->d = d;
     this->restitution = restitution;
@@ -425,10 +425,10 @@ public:
     return penetration>=0;
   }
   void resolve(float dt) {
-    // move the object back is stuck on plane 
+    // move the object back is stuck on plane
     body->p = body->p - penetration*n;
     float K_ortho = n*body->K;
-    // optional, deal with friction 
+    // optional, deal with friction
     Vector L_ortho = -(body->radius)*cross(n,body->K-K_ortho);
     body->L = (n*body->L)*n + L_ortho;
     // reverse momentum
@@ -441,7 +441,7 @@ public:
  * Default all-2-all collision handler
  */
 class All2AllCollisions : public Constraint {
-public:  
+public:
   float restitution;
   set<Body*> *bodies;
   All2AllCollisions(set<Body*> *bodies, float c=0.5) {
@@ -453,20 +453,20 @@ public:
     set<Body*>::iterator ibodyA, ibodyB;
     forEach(ibodyA,*bodies) {
       forEach(ibodyB,*bodies) {
-	Body &A = OBJ(ibodyA); // dereference
-	Body &B = OBJ(ibodyB); // dereference
-	Vector d = B.p-A.p;
-	Vector v_closing = B.v-A.v;
-	float penetration = A.radius+B.radius-norm(d);	  
-	if(penetration>0 && v_closing*d<0) {
-	  Vector q = (penetration/(A.m+B.m))*versor(d);
-	  A.p = A.p-B.m*q;
-	  B.p = B.p+A.m*q;
-	  Vector impulse = (-restitution*A.m*B.m/(A.m+B.m))*v_closing;
-	  A.K = A.K-impulse;
-	  B.K = B.K+impulse;
-	}
-      } 
+        Body &A = OBJ(ibodyA); // dereference
+        Body &B = OBJ(ibodyB); // dereference
+        Vector d = B.p-A.p;
+        Vector v_closing = B.v-A.v;
+        float penetration = A.radius+B.radius-norm(d);
+        if(penetration>0 && v_closing*d<0) {
+          Vector q = (penetration/(A.m+B.m))*versor(d);
+          A.p = A.p-B.m*q;
+          B.p = B.p+A.m*q;
+          Vector impulse = (-restitution*A.m*B.m/(A.m+B.m))*v_closing;
+          A.K = A.K-impulse;
+          B.K = B.K+impulse;
+        }
+      }
     }
   }
 };
@@ -474,7 +474,7 @@ public:
 /**
  * A Universe stores bodies, forces, constraints
  * and evolves in time.
- */ 
+ */
 class Universe {
 public:
   float dt;
@@ -490,13 +490,13 @@ public:
   Universe() {
     frame = 0;
   }
-  ~Universe() { 
+  ~Universe() {
     forEach(ibody,bodies) delete (*ibody);
     forEach(iforce,forces) delete (*iforce);
     forEach(iconstraint,constraints) delete (*iconstraint);
   }
   // evolve universe
-  void evolve() {    
+  void evolve() {
     // clear forces and troques
     forEach(ibody,bodies)
       OBJ(ibody).clear();
@@ -507,11 +507,11 @@ public:
     // integrate
     forEach(ibody,bodies)
       if(!OBJ(ibody).locked)
-	     OBJ(ibody).integrator(dt);
+             OBJ(ibody).integrator(dt);
     // handle collisions (not quite right yet)
     forEach(iconstraint,constraints)
       if(OBJ(iconstraint).detect())
-	     OBJ(iconstraint).resolve(dt);
+             OBJ(iconstraint).resolve(dt);
     frame++;
   }
 public:
@@ -535,7 +535,7 @@ InertiaTensor dI(float m, const Vector &r) {
  */
 Body operator+(const Body &a, const Body &b) {
   Body c;
-  
+
   c.color = 0.5*(a.color+b.color);
   c.radius = max(a.radius+norm(a.p-c.p),b.radius+norm(b.p-c.p));
   c.R = Rotation();
@@ -545,15 +545,15 @@ Body operator+(const Body &a, const Body &b) {
   c.L = a.L+cross(a.p-c.p,a.K)+b.L+cross(b.p-c.p,b.K);
   Vector da = a.p-c.p;
   Vector db = b.p-c.p;
-  int na = a.r.size();  
-  int nb = b.r.size();  
+  int na = a.r.size();
+  int nb = b.r.size();
   c.I(X,X) = c.I(Y,Y)= c.I(Z,Z) =0;
   // copy all r
   Vector v;
   c.r.resize(na+nb);
   for(int i=0; i<na; i++) {
     v = a.R*a.r[i]+da;
-    c.r[i] = v; 
+    c.r[i] = v;
     c.I = c.I + dI(a.m/na,v);
   }
   for(int i=0; i<nb; i++) {
@@ -561,14 +561,14 @@ Body operator+(const Body &a, const Body &b) {
     c.r[i+na] = v;
     c.I = c.I + dI(b.m/nb,v);
   }
-  // copy all faces and re-label r  
+  // copy all faces and re-label r
   int m = a.faces.size();
   c.faces.resize(a.faces.size()+b.faces.size());
   for(int j=0; j<a.faces.size(); j++)
     c.faces[j]=a.faces[j];
   for(int j=0; j<b.faces.size(); j++)
     for(int k=0; k<b.faces[j].size(); k++)
-      c.faces[j+m].push_back(b.faces[j][k]+na);  
+      c.faces[j+m].push_back(b.faces[j][k]+na);
   c.inv_I = 1.0/c.I;
   c.update_vertices();
   return c;
@@ -588,20 +588,20 @@ void Body::loadObj(const string & file,float scale=0.5) {
     while(input.good()) {
       getline(input, line);
       if(line.length()>0) {
-	string initialVal;
-	istringstream instream;
-	instream.str(line);
-	instream >> initialVal;
-	if(initialVal=="v") {
-	  instream >> x >> y >> z;
-	  Vector p = scale*Vector(x,y,z);
-	  r.push_back(p);
-	  radius = max(radius,norm(p));
-	} else  if (initialVal=="f") {
-	  array<int> path;
-	  while(instream >> x) path.push_back(x-1);
-	  faces.push_back(path);
-	}
+        string initialVal;
+        istringstream instream;
+        instream.str(line);
+        instream >> initialVal;
+        if(initialVal=="v") {
+          instream >> x >> y >> z;
+          Vector p = scale*Vector(x,y,z);
+          r.push_back(p);
+          radius = max(radius,norm(p));
+        } else  if (initialVal=="f") {
+          array<int> path;
+          while(instream >> x) path.push_back(x-1);
+          faces.push_back(path);
+        }
       }
     }
     update_vertices();
@@ -649,7 +649,7 @@ array<float> random_vector(int n, float M) {
 class SimpleUniverse : public Universe {
 private:
   Body* xb;
-public:  
+public:
   void build_universe() {
     float m = 1.0;
     float pi = 3.1415926535897931;
@@ -675,37 +675,37 @@ public:
       array<float> eps_x(n), eps_y(n), eps_z(n);
       xb->visible = false;
       for(int j=0; j<n; j++) {
-	cout << j << "  " << uniform() << endl;
-	Body &a = *new Body(m[j]);
-	a.color = Vector(uniform(),uniform(),uniform());
-	a.p = Vector(xb->p(X), xb->p(Y), xb->p(Z));
-	if(j<n-1) {
-	  eps_x[j] = uniform(-1,1)*sqrt(E);
-	  eps_y[j] = uniform(-1,1)*sqrt(E);
-	  eps_z[j] = uniform(-1,1)*sqrt(E);
-	  mysum_x += m[j]*eps_x[j];
-	  mysum_y += m[j]*eps_y[j];
-	  mysum_z += m[j]*eps_z[j];
-	} else {
-	  eps_x[j] = -mysum_x/m[j];
-	  eps_y[j] = -mysum_y/m[j];
-	  eps_z[j] = -mysum_z/m[j];
-	}
-	vx = xb->v(X) + eps_x[j];
-	vy = xb->v(Y) + eps_y[j];
-	vz = xb->v(Z) + eps_z[j];
-	a.K = Vector(m[j]*vx, m[j]*vy, m[j]*vz);
-	bodies.insert(&a);
-	forces.insert(new GravityForce(&a,1.0));
+        cout << j << "  " << uniform() << endl;
+        Body &a = *new Body(m[j]);
+        a.color = Vector(uniform(),uniform(),uniform());
+        a.p = Vector(xb->p(X), xb->p(Y), xb->p(Z));
+        if(j<n-1) {
+          eps_x[j] = uniform(-1,1)*sqrt(E);
+          eps_y[j] = uniform(-1,1)*sqrt(E);
+          eps_z[j] = uniform(-1,1)*sqrt(E);
+          mysum_x += m[j]*eps_x[j];
+          mysum_y += m[j]*eps_y[j];
+          mysum_z += m[j]*eps_z[j];
+        } else {
+          eps_x[j] = -mysum_x/m[j];
+          eps_y[j] = -mysum_y/m[j];
+          eps_z[j] = -mysum_z/m[j];
+        }
+        vx = xb->v(X) + eps_x[j];
+        vy = xb->v(Y) + eps_y[j];
+        vz = xb->v(Z) + eps_z[j];
+        a.K = Vector(m[j]*vx, m[j]*vy, m[j]*vz);
+        bodies.insert(&a);
+        forces.insert(new GravityForce(&a,1.0));
       }
     }
-    
+
     float restitution = 0.5;
     forEach(ibody,bodies)
-      
+
       if(OBJ(ibody).p(Y)<0 && OBJ(ibody).K(Y)<0) {
-	OBJ(ibody).p(Y)=-restitution*OBJ(ibody).p(Y);
-	OBJ(ibody).K(Y)=-restitution*OBJ(ibody).K(Y);
+        OBJ(ibody).p(Y)=-restitution*OBJ(ibody).p(Y);
+        OBJ(ibody).K(Y)=-restitution*OBJ(ibody).K(Y);
       }
   }
 };
@@ -727,18 +727,18 @@ public:
       bodies.insert(&b);
       forces.insert(new GravityForce(&b,0.01));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(0,0,0),
-					     Vector(0,-1,0)));
+                                             Vector(0,-1,0)));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(5,0,0),
-					     Vector(1,0,0)));
+                                             Vector(1,0,0)));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(-5,0,0),
-					     Vector(-1,0,0)));
+                                             Vector(-1,0,0)));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(0,0,5),
-					     Vector(0,0,1)));
+                                             Vector(0,0,1)));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(0,0,-5),
-					     Vector(0,0,-1)));
+                                             Vector(0,0,-1)));
       // forces.insert(new FrictionForce(&b,0.5));
       if(i==2)
-	forces.insert(new SpringForce(b_old,-1,&b,-1,2.0,3.0));
+        forces.insert(new SpringForce(b_old,-1,&b,-1,2.0,3.0));
       b_old = &b;
     }
     constraints.insert(new All2AllCollisions(&bodies,0.8));
@@ -758,9 +758,9 @@ public:
     cube.R = Rotation(theta);
     for(int x=-1; x<=+1; x+=2)
       for(int y=-1; y<=+1; y+=2)
-	for(int z=-1; z<=+1; z+=2)
-	  cube.r.push_back(Vector(x,y,z));
-    cube.faces.resize(6);    
+        for(int z=-1; z<=+1; z+=2)
+          cube.r.push_back(Vector(x,y,z));
+    cube.faces.resize(6);
     for(int i=0; i<2; i++) {
       cube.faces[i].push_back(0+4*i);
       cube.faces[i].push_back(1+4*i);
@@ -780,17 +780,17 @@ public:
   }
   void build_universe() {
     Body *thing = new Body();
-    (*thing) = 
+    (*thing) =
       cube(Vector(0,4,0),Vector(0,1,0),Vector(0,1,0)) +
       cube(Vector(1,4,0),Vector(1,0,0),Vector(0,1,0.2)) +
-      cube(Vector(1,4.5,.5),Vector(1,0,1),Vector(0.2,1));		    
-    (*thing).L = Vector(0,0.1,0);    
+      cube(Vector(1,4.5,.5),Vector(1,0,1),Vector(0.2,1));
+    (*thing).L = Vector(0,0.1,0);
     bodies.insert(thing);
     Body *other_thing = new Body();
     (*other_thing) = (*thing);
     (*other_thing).p = Vector(-1,3,0);
     (*other_thing).L = Vector(-0.1,0.0,0.1);
-    bodies.insert(other_thing);    
+    bodies.insert(other_thing);
   }
 };
 
@@ -831,7 +831,7 @@ void createWindow(const char* title) {
   glutCreateWindow(title);
   glClearColor(0.9f, 0.95f, 1.0f, 1.0f);
   glEnable(GL_DEPTH_TEST);
-  glShadeModel(GL_SMOOTH);  
+  glShadeModel(GL_SMOOTH);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   gluPerspective(60.0, (double)width/(double)height, 1.0, 500.0);
@@ -842,15 +842,16 @@ void createWindow(const char* title) {
  * Called each frame to update the 3D scene. Delegates to
  * the application.
  */
-void update() {
+void update(int value) {
   // evolve world
-  universe.dt = 1 / FPS;
+  universe.dt = DT;
   universe.evolve();
+  glutTimerFunc(MSPF, update, 0);
   glutPostRedisplay();
 }
 
 /**
- * Function called each frame to display the 3D scene. 
+ * Function called each frame to display the 3D scene.
  * It draws all bodies, forces and constraints.
  */
 void display() {
@@ -859,7 +860,7 @@ void display() {
   gluLookAt(0.0,3.5,10.0, 0.0,3.5,0.0, 0.0,1.0,0.0);
   forEach(universe.ibody,universe.bodies)
     if(OBJ(universe.ibody).visible)
-		OBJ(universe.ibody).draw();
+                OBJ(universe.ibody).draw();
   forEach(universe.iforce,universe.forces)
     OBJ(universe.iforce).draw();
   forEach(universe.iconstraint,universe.constraints)
@@ -886,10 +887,10 @@ void Body::draw() {
   } else
     for(int i=0; i<faces.size(); i++) {
       float k = 0.5*(1.0+(float)(i+1)/faces.size());
-      glColor3f(color(0)*k,color(1)*k,color(2)*k);    
-      glBegin(GL_POLYGON);        
+      glColor3f(color(0)*k,color(1)*k,color(2)*k);
+      glBegin(GL_POLYGON);
       for(int j=0; j<faces[i].size(); j++)
-	glVertex3fv(vertices[faces[i][j]].v);
+        glVertex3fv(vertices[faces[i][j]].v);
       glVertex3fv(vertices[faces[i][0]].v);
       glEnd();
     }
@@ -924,7 +925,7 @@ void Water::draw() {
       glVertex3fv(Vector(-x0+dx*i+dx,m[i+1][j],-x0+dx*j).v);
     }
     glEnd();
-  }      
+  }
 }
 
 /**
@@ -962,15 +963,6 @@ void keyboard(unsigned char key, int x, int y) {
 void motion(int x, int y) { }
 
 /**
- * Called on each timer.
- */
-void timer(int value)
-{
-  glutPostRedisplay();
-  glutTimerFunc(FPS, timer, 0);
-}
-
-/**
  * The main function. Everythign starts here.
  */
 int main(int argc, char** argv) {
@@ -983,11 +975,10 @@ int main(int argc, char** argv) {
   glutReshapeFunc(reshape);
   glutKeyboardFunc(keyboard);
   glutDisplayFunc(display);
-  glutIdleFunc(update);
   glutMouseFunc(mouse);
-  glutMotionFunc(motion);  
-  glutTimerFunc(FPS, timer, 0);
+  glutMotionFunc(motion);
+  glutTimerFunc(MSPF, update, 0); // Do not refresh faster than target framerate
   // Enter into a loop
-  glutMainLoop();  
+  glutMainLoop();
   return 0;
 }
