@@ -453,18 +453,21 @@ public:
     set<Body*>::iterator ibodyA, ibodyB;
     forEach(ibodyA,*bodies) {
       forEach(ibodyB,*bodies) {
-        Body &A = OBJ(ibodyA); // dereference
-        Body &B = OBJ(ibodyB); // dereference
-        Vector d = B.p-A.p;
-        Vector v_closing = B.v-A.v;
-        float penetration = A.radius+B.radius-norm(d);
-        if(penetration>0 && v_closing*d<0) {
-          Vector q = (penetration/(A.m+B.m))*versor(d);
-          A.p = A.p-B.m*q;
-          B.p = B.p+A.m*q;
-          Vector impulse = (-restitution*A.m*B.m/(A.m+B.m))*v_closing;
-          A.K = A.K-impulse;
-          B.K = B.K+impulse;
+	if((*ibodyA)<(*ibodyB)) {
+	  Body &A = OBJ(ibodyA); // dereference
+	  Body &B = OBJ(ibodyB); // dereference
+	  Vector d = B.p-A.p;
+	  Vector n = d/norm(d);
+	  Vector v_closing = B.v-A.v;
+	  float penetration = A.radius+B.radius-norm(d);
+	  if(penetration>0 && v_closing*n<0) {
+	    Vector q = (penetration/(A.m+B.m))*versor(d);
+	    A.p = A.p-B.m*q;
+	    B.p = B.p+A.m*q;
+	    Vector impulse = (restitution+1)/(1.0/A.m+1.0/B.m)*(v_closing*n)*n;
+	    A.K = A.K+impulse;
+	    B.K = B.K-impulse;
+	  }
         }
       }
     }
@@ -717,17 +720,19 @@ class MyUniverse : public Universe {
 public:
   void build_universe() {
     Body *b_old = 0;
-    for(int i=0; i<4; i++) {
+    for(int i=0; i<30; i++) {
       Body &b = *new Body();
-      b.color=Vector(((i+1)%4)?1:0,i%2,(i%3)?1:0);
+      b.color=Vector(uniform(0,1),uniform(0,1),uniform(0,1));
       b.loadObj("assets/sphere.obj");
-      b.p = Vector(i,2*i+2,-i);
-      b.K = Vector(0.1*i,0.01*i,0);
-      b.L = Vector(0.5,0.5*i,0.1*i);
+      b.p = Vector(uniform(-2,2),uniform(1,3),uniform(-2,2));
+      b.K = Vector(uniform(-2,2),uniform(-2,2),0);
+      b.L = Vector(uniform(0,1),uniform(0,1),uniform(0,1));
       bodies.insert(&b);
-      forces.insert(new GravityForce(&b,0.01));
+      forces.insert(new GravityForce(&b,1));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(0,0,0),
                                              Vector(0,-1,0)));
+      constraints.insert(new PlaneConstraint(&b,0.9,Vector(0,5,0),
+                                             Vector(0,+1,0)));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(5,0,0),
                                              Vector(1,0,0)));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(-5,0,0),
@@ -736,10 +741,6 @@ public:
                                              Vector(0,0,1)));
       constraints.insert(new PlaneConstraint(&b,0.9,Vector(0,0,-5),
                                              Vector(0,0,-1)));
-      // forces.insert(new FrictionForce(&b,0.5));
-      if(i==2)
-        forces.insert(new SpringForce(b_old,-1,&b,-1,2.0,3.0));
-      b_old = &b;
     }
     constraints.insert(new All2AllCollisions(&bodies,0.8));
     // forces.insert(new Water(&bodies,3.0));
