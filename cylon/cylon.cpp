@@ -28,6 +28,7 @@ using namespace std;
 #define forXYZ(i) for(int i=0; i<3; i++)
 #define forEach(i,s) for(i=(s).begin();i!=(s).end();i++)
 #define OBJ(iterator) (*(*iterator))
+const float Pi = 3.1415926535897931;
 const float PRECISION = 0.00001;
 const int X = 0;
 const int Y = 1;
@@ -520,6 +521,8 @@ public:
 public:
   virtual void build_universe() { bodies.insert(new Body()); };
   virtual void callback() {};
+  virtual void mouse(int button, int state, int x, int y) {};
+  virtual void keyboard(unsigned char key, int x, int y) {};
 };
 
 /**
@@ -615,20 +618,24 @@ void Body::loadObj(const string & file,float scale=0.5) {
  * Make a universe with an airplane
  */
 class MyUniverseAirplane : public Universe {
+  Body plane;
 public:
   void build_universe() {
-    Body &b = *new Body();
-    b.color=Vector(1,0,0); //red
-    b.loadObj("assets/plane.obj",0.5);
-    b.p = Vector(0,2,0);
-    b.K = Vector(0,0,+5);
-    b.L = Vector(-1,0,0);
-    bodies.insert(&b);
+    plane.color=Vector(1,0,0); //red
+    plane.loadObj("assets/plane.obj",0.5);    
+    plane.R = Rotation(Vector(0,Pi,0));
+    bodies.insert(&plane);    
   }
-  void callback() {
-    forEach(ibody,bodies) {
-      OBJ(ibody).K = OBJ(ibody).R*Vector(0,0,+5);
-    }
+  void callbak() {
+    
+  }
+  void keyboard(unsigned char key, int x, int y) {
+    if(key=='w') plane.L = plane.L + Vector(+1,0,0);
+    if(key=='a') plane.L = plane.L + Vector(0,0,-1);
+    if(key=='d') plane.L = plane.L + Vector(0,0,+1);
+    if(key=='z') plane.L = plane.L + Vector(-1,0,0);
+    if(key=='n') plane.K = plane.K + Vector(0,0,+1);
+    if(key=='m') plane.K = plane.K + Vector(0,0,-1);    
   }
 };
 
@@ -655,9 +662,8 @@ private:
 public:
   void build_universe() {
     float m = 1.0;
-    float pi = 3.1415926535897931;
     float v = 5.0;
-    float theta = pi/2.2;
+    float theta = Pi/2.2;
     Body &b = *new Body(m);
     b.color = Vector(uniform(),uniform(),uniform()); //red
     b.loadObj("assets/sphere.obj",0.5);
@@ -814,8 +820,8 @@ public:
   }
 };
 
-MyUniverse universe;
-// MyUniverseAirplane universe;
+// MyUniverse universe;
+MyUniverseAirplane universe;
 // MyUniverseCubes universe;
 // SimpleUniverse universe;
 // CompositionUniverse universe;
@@ -939,23 +945,15 @@ void reshape(int width, int height) {
 /**
  * Function called when a mouse button is pressed.
  */
-void mouse(int button, int state, int x, int y) { }
+void mouse(int button, int state, int x, int y) { 
+  universe.mouse(button,state,x,y);
+}
 
 /**
  * Function called when a key is pressed.
  */
 void keyboard(unsigned char key, int x, int y) {
-  // '1' kick ball 1, '2' kicks ball 2, etc.
-  int i = 0;
-  set<Body*>::iterator ibody;
-  forEach(ibody,universe.bodies) {
-    if(key-49==i) {
-      Body &body = OBJ(ibody); // dereference
-      body.K = Vector(0.2,0.2,0);
-      body.L = Vector(0,0,0.04);
-    }
-    i++;
-  }
+  universe.keyboard(key,x,y);
 }
 
 /**
