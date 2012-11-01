@@ -37,6 +37,12 @@ const float DT  = 0.017f; // Hard-coded dt for Universe::evolve()
 const int MSPF = 17; // msec per frame: glutTimerFunc() only takes integers for params
                      // lower value = higher frame rate
 
+
+float uniform(float a=0, float b=1) {
+  int n = 10000;
+  return a+(b-a)*(float)(rand() % n)/n;
+}
+
 /**
  * Define class Vector
  */
@@ -379,6 +385,28 @@ public:
   void draw();
 };
 
+Vector resolve_collision(Body &A, Body &B, Vector q, Vector n, 
+			 float c, float cf) {
+  Vector r_cA = q-A.p;
+  Vector r_cB = q-B.p;
+  Vector v_cA = cross(A.omega,r_cA)+A.v;
+  Vector v_cB = cross(B.omega,r_cB)+B.v;
+  Vector v_closing = v_cB-v_cA;
+  Vector t = versor(cross(n,v_closing));
+  Vector Jo,Jp,J;
+  Jo = (c+1)*(v_closing*n)/
+    (1.0/A.m+1.0/B.m+(A.inv_I*cross(cross(r_cA,n),r_cA)+
+		      B.inv_I*cross(cross(r_cB,n),r_cB))*n)*n;
+  Jp = (cf+1)*(v_closing*t)/
+    (1.0/A.m+1.0/B.m+(A.inv_I*cross(cross(r_cA,t),r_cA)+
+		      B.inv_I*cross(cross(r_cB,t),r_cB))*t)*t;
+  J = Jo+Jp;
+  A.K = A.K + J;
+  B.K = B.K - J;
+  A.L = A.L + cross(r_cA,J);
+  B.L = B.L - cross(r_cB,J);
+}
+
 /**
  * A Constraint has detect and resolve methods.
  */
@@ -387,20 +415,6 @@ public:
   virtual bool detect()=0;
   virtual void resolve(float dt)=0;
   virtual void draw() {}
-  Vector impluse(const Body &A, const Body &B,
-                 Vector &r_A, Vector &r_B, Vector n, float c) {
-    float IA; // FIX
-    float IB; // FIX
-    Vector r_cA = A.R*r_A;
-    Vector r_cB = B.R*r_B;
-    Vector v_cA = cross(A.omega,r_A)+A.v;
-    Vector v_cB = cross(B.omega,r_B)+B.v;
-    Vector crossA = cross(r_cA,n);
-    Vector crossB = cross(r_cB,n);
-    Vector dF = (-(c-1)/(1.0/A.m+1.0/B.m+
-                         crossA*crossA/IA+
-                         crossB*crossB/IB)*(v_cB-v_cB)*n)*n;
-  }
 };
 
 /**
@@ -462,12 +476,14 @@ public:
 	  Vector v_closing = B.v-A.v;
 	  float penetration = A.radius+B.radius-norm(d);
 	  if(penetration>0 && v_closing*n<0) {
-	    Vector q = (penetration/(A.m+B.m))*versor(d);
-	    A.p = A.p-B.m*q;
-	    B.p = B.p+A.m*q;
-	    Vector impulse = (restitution+1)/(1.0/A.m+1.0/B.m)*(v_closing*n)*n;
-	    A.K = A.K+impulse;
-	    B.K = B.K-impulse;
+	    // move bodies to eliminate penetration
+	    Vector delta = (penetration/(A.m+B.m))*versor(d);
+	    A.p = A.p-B.m*delta;
+	    B.p = B.p+A.m*delta;
+	    // compute cotact point
+	    Vector n = versor(B.p-A.p);
+	    Vector q = A.p + A.radius*n;
+	    resolve_collision(A,B,q,n,restitution,restitution);
 	  }
         }
       }
@@ -625,24 +641,21 @@ public:
     plane.loadObj("assets/plane.obj",0.5);    
     plane.R = Rotation(Vector(0,Pi,0));
     bodies.insert(&plane);    
+    forces.insert(new GravityForce(&plane,0.5));
+    // constraints.insert(new PlaneConstraint(&plane,0.0,Vector(0,-0.2,0),Vector(0,-1,0)));
   }
-  void callbak() {
-    
+  void callback() {
   }
   void keyboard(unsigned char key, int x, int y) {
-    if(key=='w') plane.L = plane.L + Vector(+1,0,0);
-    if(key=='a') plane.L = plane.L + Vector(0,0,-1);
-    if(key=='d') plane.L = plane.L + Vector(0,0,+1);
-    if(key=='z') plane.L = plane.L + Vector(-1,0,0);
+    if(key=='w') plane.L = plane.L + Vector(+0.1,0,0);
+    if(key=='a') plane.L = plane.L + Vector(0,0,+0.1);
+    if(key=='d') plane.L = plane.L + Vector(0,0,-0.1);
+    if(key=='z') plane.L = plane.L + Vector(-0.1,0,0);
     if(key=='n') plane.K = plane.K + Vector(0,0,+1);
     if(key=='m') plane.K = plane.K + Vector(0,0,-1);    
   }
 };
 
-float uniform(float a=0, float b=1) {
-  int n = 10000;
-  return a+(b-a)*(float)(rand() % n)/n;
-}
 
 array<float> random_vector(int n, float M) {
   float one_norm = 0.0;
@@ -820,8 +833,8 @@ public:
   }
 };
 
-// MyUniverse universe;
-MyUniverseAirplane universe;
+MyUniverse universe;
+// MyUniverseAirplane universe;
 // MyUniverseCubes universe;
 // SimpleUniverse universe;
 // CompositionUniverse universe;
