@@ -634,25 +634,30 @@ void Body::loadObj(const string & file,float scale=0.5) {
  * Make a universe with an airplane
  */
 class MyUniverseAirplane : public Universe {
-  Body plane;
+  Body *plane;
 public:
   void build_universe() {
-    plane.color=Vector(1,0,0); //red
-    plane.loadObj("assets/plane.obj",0.5);    
-    plane.R = Rotation(Vector(0,Pi,0));
-    bodies.insert(&plane);    
-    forces.insert(new GravityForce(&plane,0.5));
+    plane = NULL;
+    Body &p = *new Body();
+    p.color=Vector(1,0,0); //red
+    p.loadObj("assets/plane.obj",0.5);    
+    p.R = Rotation(Vector(0,Pi,0));
+    plane = &p;
+    bodies.insert(plane);    
+    forces.insert(new GravityForce(plane,0.5));
     // constraints.insert(new PlaneConstraint(&plane,0.0,Vector(0,-0.2,0),Vector(0,-1,0)));
   }
   void callback() {
   }
   void keyboard(unsigned char key, int x, int y) {
-    if(key=='w') plane.L = plane.L + Vector(+0.1,0,0);
-    if(key=='a') plane.L = plane.L + Vector(0,0,+0.1);
-    if(key=='d') plane.L = plane.L + Vector(0,0,-0.1);
-    if(key=='z') plane.L = plane.L + Vector(-0.1,0,0);
-    if(key=='n') plane.K = plane.K + Vector(0,0,+1);
-    if(key=='m') plane.K = plane.K + Vector(0,0,-1);    
+    if (plane != NULL) {
+      if(key=='w') plane->L = plane->L + Vector(+0.1,0,0);
+      if(key=='a') plane->L = plane->L + Vector(0,0,+0.1);
+      if(key=='d') plane->L = plane->L + Vector(0,0,-0.1);
+      if(key=='z') plane->L = plane->L + Vector(-0.1,0,0);
+      if(key=='n') plane->K = plane->K + Vector(0,0,+1);
+      if(key=='m') plane->K = plane->K + Vector(0,0,-1);    
+    }
   }
 };
 
@@ -833,8 +838,8 @@ public:
   }
 };
 
-MyUniverse universe;
-// MyUniverseAirplane universe;
+// MyUniverse universe;
+MyUniverseAirplane universe;
 // MyUniverseCubes universe;
 // SimpleUniverse universe;
 // CompositionUniverse universe;
